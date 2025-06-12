@@ -15,8 +15,8 @@
   <div id="barraTopo">
     <img src="logo.png" alt="Logo" style="height: 60px; margin-bottom: 20px" />
     <div id="botoesTopo">
-      <button class="btnTopo" onclick="mostrarTela('telaEstoque')">📦 Estoque</button>
-      <button class="btnTopo" onclick="mostrarTela('telaExpedicao')">🚚 Expedição</button>      
+      <button class="btnTopo" id="btnEstoque" onclick="mostrarTela('telaEstoque')">📦 Estoque</button>
+      <button class="btnTopo" id="btnExpedicao" onclick="mostrarTela('telaExpedicao')">🚚 Expedição</button>      
       <button class="btnTopo" id="btnHistorico" onclick="mostrarTela('telaHistorico')">📁 Ver Histórico</button>
       <button class="btnTopo" id="btnNovoSKU"  onclick="mostrarTela('telaSkus')">🔍 Consultar SKU's</button>
     </div>
@@ -61,9 +61,9 @@
   </div>
 
   <div id="telaPreparacao" style="display:none">
+    <h2>Preparação Pedido: <span id="tituloPedidoPreparacao"> - </span><span id="idPedidoPreparacao"></span></h2>
     <div id="containerPreparacao">
       <div class="flex-row">
-        <h2>Preparação do Pedido: <span id="tituloPedidoPreparacao"></span></h2>
         <div class="barra-progresso-container">
           <div class="barra-progresso" id="barraSeparados">
             <div class="progresso" id="progressoSeparados" style="width: 0%;">0%</div>
@@ -103,6 +103,11 @@
     <div id="colunaBlisters" class="blisters">
       <h3 class="titulo-coluna">📦 Embalagem</h3>
       <button id="btnNovoBlister" onclick="abrirModalEmbalagem()">Adicionar</button>
+      <select id="filtroEmbalagens" onchange="filtrarEmbalagens()" style="margin-top:6px; width:100%;">
+        <option value="todas">Todas</option>
+        <option value="aberto">Abertas</option>
+        <option value="fechado">Fechadas</option>
+      </select>
       <div id="listaEmbalagens"></div>
       <div class="paginacao-coluna">
         <button id="btnEmbAnterior" onclick="paginaAnteriorEmbalagens()">⬅️</button>

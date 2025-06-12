@@ -102,7 +102,7 @@ body {
 
 .skus-separados {
   background: var(--cinza2);
-  height: auto;
+  min-height: 420px;
   border-radius: 10px;
   width: 230px;
   border: var(--cinza3) solid 2px;
@@ -112,6 +112,7 @@ body {
   background: var(--cinza3);
   border-radius: 10px;
   border: var(--cinza2) solid 2px;
+  min-height: 420px;
 }
 
 #listaPreparados {
@@ -123,7 +124,7 @@ body {
 .blisters {
   background: var(--cinza2);
   border: var(--cinza3) solid 2px;
-  height: auto;
+  min-height: 420px;
   width: 230px;
   border-radius: 10px;
 }
@@ -471,6 +472,10 @@ body {
   transition: background 0.3s ease;
 }
 
+.btnTopo.ativo {
+  background: var(--cinza4);
+}
+
 .btn-ir-expedicao:hover {
   background-color: var(--azul1);
 }
@@ -674,7 +679,6 @@ body {
   width: 200px;
   font-family: sans-serif;
   margin: 10px;
-  margin-left: 33px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1294,6 +1298,7 @@ tr {
     margin-top: 20px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     border: 2px solid var(--cinza3);
+    min-width: 1050px;
 }
 
 .paginacao-container {

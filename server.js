@@ -303,7 +303,7 @@ app.put("/pedidos/:id/voltar", async (req, res) => {
   const pedidoId = req.params.id;
 
   try {
-    const [result] = await pool.execute(
+    const [result] = await db.execute(
       "UPDATE estoque.pedidos SET status = 'em andamento' WHERE id = ?",
       [pedidoId]
     );
@@ -452,8 +452,11 @@ app.get('/embalagens/:pedido_id', async (req, res) => {
 
   try {
     const [rows] = await db.execute(
-      `SELECT * FROM estoque.embalagens 
-      WHERE pedido_id = ?`,
+      `SELECT e.*, COALESCE(SUM(ei.qtd),0) AS ocupado
+       FROM estoque.embalagens e
+       LEFT JOIN estoque.embalagens_itens ei ON e.id = ei.embalagem_id
+       WHERE e.pedido_id = ?
+       GROUP BY e.id`,
       [pedido_id]
     );
 

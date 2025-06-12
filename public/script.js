@@ -28,12 +28,13 @@ let dadosSeparados = [];
 let dadosPreparados = [];
 let dadosEmbalagens = [];
 let skusPorEmbalagem = {};
+let filtroStatusEmbalagem = 'todas';
 
 let paginaSeparados = 1;
 let paginaPreparados = 1;
 let paginaEmbalagens = 1;
 
-const itensPorPaginaPreparacao = 10;
+const itensPorPaginaPreparacao = 5;
 
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnHistorico").addEventListener("click", () => {
@@ -67,6 +68,17 @@ function mostrarTela(idTela) {
     if (el) el.style.display = tela === idTela ? "block" : "none";
   });
 
+    // Destaca botão ativo
+  document.querySelectorAll('.btnTopo').forEach(b => b.classList.remove('ativo'));
+  const mapa = {
+    telaEstoque: 'btnEstoque',
+    telaExpedicao: 'btnExpedicao',
+    telaHistorico: 'btnHistorico',
+    telaSkus: 'btnNovoSKU'
+  };
+  const botao = document.getElementById(mapa[idTela]);
+  if (botao) botao.classList.add('ativo');
+  
   // Chamada de funções de carregamento específicas para cada tela
   switch (idTela) {
     case "telaEstoque":
@@ -143,6 +155,7 @@ function carregarPedidosExpedicao() {
         card.innerHTML = `
           <strong>Pedido:</strong> ${p.pedido}<br>
           <strong>Tipo:</strong> ${p.tipo}<br>
+          <strong>Enviado:</strong> ${p.inicio ? new Date(p.inicio).toLocaleDateString() : ''}<br>
           <strong>Memórias:</strong> ${p.qtd_memoria || 0} | Processadores: ${p.qtd_processador || 0}<br>
           <button id="btnPrepararPedido" onclick="iniciarPreparacao(${p.id}, '${p.pedido}')" style="margin-right: 10px;">Preparar</button>
           <button id="btnVoltarPedido" onclick="voltarParaEstoqueStatus(${p.id})">Voltar</button>
@@ -196,13 +209,11 @@ async function carregarSkusSeparados() {
       </div>
     `;
 
-    const totalSeparados = itens.filter(i => i.status === "separado").length;
-    const totalPreparados = itens.filter(i => i.status === "preparado").length;
-
-    atualizarBarraProgresso(totalSeparados, totalPreparados);
-    atualizarResumoPreparacao();
-    renderizarSkusPreparados(itens);
-    await renderizarSkusPreparadosExpandido();
+    dadosSeparados = [];
+    dadosPreparados = [];
+    atualizarBarraProgresso(0, 0);
+    renderizarSeparadosPaginado();
+    renderizarPreparadosPaginado();
 
   }
 }
@@ -420,11 +431,16 @@ function renderizarEmbalagensPaginado() {
   const lista = document.getElementById("listaEmbalagens");
   lista.innerHTML = "";
 
-if (!dadosEmbalagens || dadosEmbalagens.length === 0) {
+  const filtradas = dadosEmbalagens.filter(e => {
+    if (filtroStatusEmbalagem === 'todas') return true;
+    return e.status === filtroStatusEmbalagem;
+  });
+
+if (!filtradas || filtradas.length === 0) {
     lista.innerHTML = "<p>Nenhuma embalagem criada.</p>";
   } else {
     const inicio = (paginaEmbalagens - 1) * itensPorPaginaPreparacao;
-    const pagina = dadosEmbalagens.slice(inicio, inicio + itensPorPaginaPreparacao);
+    const pagina = filtradas.slice(inicio, inicio + itensPorPaginaPreparacao);
 
       pagina.forEach((emb) => {
       const div = document.createElement("div");
@@ -459,7 +475,7 @@ if (!dadosEmbalagens || dadosEmbalagens.length === 0) {
     });
   }
 
-  const totalPag = Math.ceil((dadosEmbalagens.length || 0) / itensPorPaginaPreparacao) || 1;
+  const totalPag = Math.ceil((filtradas.length || 0) / itensPorPaginaPreparacao) || 1;
   document.getElementById("paginaEmbalagens").textContent = `${paginaEmbalagens} / ${totalPag}`;
   document.getElementById("btnEmbAnterior").disabled = paginaEmbalagens === 1;
   document.getElementById("btnEmbProximo").disabled = paginaEmbalagens === totalPag;
@@ -507,7 +523,7 @@ function renderizarSeparadosPaginado() {
         <div class="card-body">
           <em>${item.modelo || 'Modelo não cadastrado'}</em>
         </div>
-        <button class="btn-preparar" onclick="prepararItem(${item.id}, '${item.hardware}', ${item.qtd})">Adicionar</button>
+        <button class="btn-preparar" onclick="prepararItem(${item.id}, '${item.hardware}', ${item.qtd}, '${item.sku}')">Adicionar</button>
       `;
       area.appendChild(card);
     });
@@ -583,15 +599,35 @@ function paginaAnteriorEmbalagens() {
 }
 
 function proximaPaginaEmbalagens() {
-  const total = Math.ceil(dadosEmbalagens.length / itensPorPaginaPreparacao);
+    const filtradas = dadosEmbalagens.filter(e => {
+    if (filtroStatusEmbalagem === 'todas') return true;
+    return e.status === filtroStatusEmbalagem;
+  });
+  const total = Math.ceil(filtradas.length / itensPorPaginaPreparacao);
   if (paginaEmbalagens < total) {
     paginaEmbalagens++;
     renderizarEmbalagensPaginado();
   }
 }
 
-async function prepararItem(itemId, hardware, qtd) {
+function filtrarEmbalagens() {
+  const select = document.getElementById('filtroEmbalagens');
+  filtroStatusEmbalagem = select.value;
+  paginaEmbalagens = 1;
+  renderizarEmbalagensPaginado();
+}
+
+async function prepararItem(itemId, hardware, qtd, sku) {
   try {
+        if (hardware === "Memória RAM") {
+      const res = await fetch(`${API_URL}/embalagens/${pedidoIdAtual}`);
+      const emb = await res.json();
+      const abertos = emb.filter(e => e.tipo === 'blister' && e.status === 'aberto');
+      if (abertos.length === 0) {
+        mostrarAviso("⚠️ Abra um blister antes de preparar.", "#f39c12");
+        return;
+      }
+    }
     const resposta = await fetch(`${API_URL}/itens-preparados/${itemId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -600,13 +636,13 @@ async function prepararItem(itemId, hardware, qtd) {
 
     if (!resposta.ok) throw new Error("Erro ao preparar item");
 
-    // Buscar o item do banco ou cache local
-    const item = skuData.find(s => s.id === itemId);
-    const sku = item?.sku || "SKU desconhecido";
+ // SKU vindo por parâmetro garante que não será "desconhecido"
+    const skuValue = sku || (dadosSeparados.find(s => s.id === itemId)?.sku);
+    const skuFinal = skuValue || "SKU desconhecido";
 
     // 🔥 Distribuir automaticamente
     if (hardware === "Memória RAM") {
-      await distribuirSkuParaBlisters(itemId, sku, qtd, hardware);
+     await distribuirSkuParaBlisters(itemId, skuFinal, qtd, hardware);
     }
 
     // Recarrega interface
@@ -778,6 +814,7 @@ function iniciarPreparacao(id, numeroPedido) {
   pedidoIdAtual = id;
   pedidoAtual = numeroPedido;
   document.getElementById("tituloPedidoPreparacao").textContent = numeroPedido;
+  document.getElementById("idPedidoPreparacao").textContent = id;
   mostrarTela("telaPreparacao");
   carregarSkusSeparados(); // <-- Corrigido aqui
   carregarEmbalagens(pedidoIdAtual);
@@ -1255,48 +1292,44 @@ function removerSKU(index) {
   atualizarInterface();
 }
 // Finalizar pedido
-function enviarPedido() {
-  const skus = pedidos[pedidoAtual].skus || [];
+async function enviarPedido() {
+  try {
+    const itens = await fetch(`${API_URL}/itens/${pedidoIdAtual}`).then(r => r.json());
 
-  let qtd_memoria = 0;
-  let qtd_processador = 0;
+   let qtd_memoria = 0;
+   let qtd_processador = 0;
 
-  skus.forEach(item => {
-    if (item.hardware === "Memória RAM") {
-      qtd_memoria += item.qtdMemorias || 0;
-    } else if (item.hardware === "Processador") {
-      qtd_processador += item.qtdProcessadores || 0;
-    }
-  });
-
-  fetch("https://10.10.2.94:5501/enviar", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      pedidoId: pedidoIdAtual,
-      qtd_memoria,
-      qtd_processador
-    })
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        mostrarAviso("✅ Pedido enviado para expedição!", "#2ecc71");
-
-        // Atualiza status localmente
-        delete pedidos[pedidoAtual];
-        localStorage.setItem("pedidosRAM", JSON.stringify(pedidos));
-
-        // Volta para a tela inicial e recarrega a lista
-        mostrarTela('telaEstoque');
-      } else {
-        mostrarAviso("❌ Falha ao enviar pedido.", "#e74c3c");
+    itens.forEach(item => {
+      if (item.hardware === "Memória RAM") {
+        qtd_memoria += item.qtd;
+      } else if (item.hardware === "Processador") {
+        qtd_processador += item.qtd;
       }
-    })
-    .catch(err => {
-      console.error("Erro ao enviar pedido:", err);
-      mostrarAviso("❌ Erro ao enviar pedido.", "#e74c3c");
     });
+
+   const res = await fetch("https://10.10.2.94:5501/enviar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pedidoId: pedidoIdAtual,
+        qtd_memoria,
+        qtd_processador
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      mostrarAviso("✅ Pedido enviado para expedição!", "#2ecc71");
+      delete pedidos[pedidoAtual];
+      localStorage.setItem("pedidosRAM", JSON.stringify(pedidos));
+      mostrarTela('telaEstoque');
+    } else {
+      mostrarAviso("❌ Falha ao enviar pedido.", "#e74c3c");
+    }
+  } catch (err) {
+    console.error("Erro ao enviar pedido:", err);
+    mostrarAviso("❌ Erro ao enviar pedido.", "#e74c3c");
+  }
 }
 
 function mostrarHistorico() {
