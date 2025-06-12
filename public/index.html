@@ -39,15 +39,16 @@
             <button onclick="selecionarTipo('ambos')" id="btnAmbos">Ambos</button>
           </div>
           <button id="confirmarPedido" onclick="confirmarNovoPedido()" disabled>Continuar</button>
-          <button onclick="fecharModalNovoPedido()" style="background: #bdc3c7; margin-left: 10px">Cancelar</button>
+          <button id="cancelarPedido" onclick="fecharModalNovoPedido()">Cancelar</button>
         </div>
       </div>
-      <div id="iniciarPedido">
-        <h2>📪 Iniciar Separação</h2>
-        <button id="btnIniciar" style="margin-top: 10px; margin-right: 10px" onclick="abrirModalNovoPedido()">🚀 Iniciar Pedido</button>
-      </div>
-      <div id="pedidosRecentes">
-        <h2>📬▪ Pedidos em Separação</h2>
+      <div id="pedidosRecentes">       
+        <div id="iniciarPedido">
+          <h2>📬▪ Pedidos em Separação</h2>
+          <div id="btnBotaoIniciar">
+            <button id="btnIniciar" style="margin-top: 10px; margin-right: 10px" onclick="abrirModalNovoPedido()">🚀 Iniciar Pedido</button>
+          </div>
+        </div>
         <div id="listaPedidosEstoque" class="cards-pedidos"></div>
       </div>
     </div>
@@ -75,7 +76,7 @@
       </div>
       <div class="cardsResumo">
         <div id="resumoPreparacao" class="resumo-bloco"></div>        
-        <button id="btnFinalizarPreparacao" class="btn-icone" onclick="finalizarPreparacao()">Finalizar</button>
+        <button id="btnFinalizarPreparacao" class="btn-icone" onclick="finalizarPreparacao()"disabled>Finalizar</button>
       </div>
     </div>
   
@@ -255,6 +256,16 @@
       <div class="modal-buttons">
         <button id="btnConfirmarExcluir" class="btn-confirm">Sim, excluir</button>
         <button onclick="fecharModalExcluir()" class="btn-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+    <div id="modalAddSku" class="modal hidden">
+    <div class="modal-content">
+      <h3>Adicionar SKU</h3>
+      <select id="selectAddSku"></select>
+      <div class="modal-buttons">
+        <button onclick="confirmarAddSku()" class="btn-confirm">Adicionar</button>
+        <button onclick="fecharModalAddSku()" class="btn-cancel">Cancelar</button>
       </div>
     </div>
   </div>

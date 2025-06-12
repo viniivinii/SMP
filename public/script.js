@@ -36,6 +36,12 @@ let paginaEmbalagens = 1;
 
 const itensPorPaginaPreparacao = 5;
 
+let indiceExcluir = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btnConfirmarExcluir');
+  if (btn) btn.addEventListener('click', confirmarExcluirSku);
+});
+
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnHistorico").addEventListener("click", () => {
     atualizarHistoricoDoBanco();
@@ -196,7 +202,7 @@ async function carregarSkusSeparados() {
     renderizarSeparadosPaginado();
     renderizarPreparadosPaginado();
 
-    atualizarBarraProgresso(totalPreparados, totalSeparados + totalPreparados);
+    atualizarBarraProgresso(totalSeparados, totalPreparados);
 
   } catch (error) {
     console.error("Erro detalhado:", error);
@@ -309,16 +315,16 @@ async function atualizarResumoPreparacao() {
 
     let qtdMemorias = 0;
     let qtdProcessadores = 0;
-    let totalSeparados = 0;
-    let totalPreparados = 0;
 
+    const itensSeparados = itens.filter(i => i.status === "separado");
     const itensPreparados = itens.filter(i => i.status === "preparado");
+    
+    const totalSeparados = itensSeparados.reduce((acc, i) => acc + i.qtd, 0);
     const totalItensPreparados = itensPreparados.reduce((acc, i) => acc + i.qtd, 0);
 
     itens.forEach(item => {
       if (item.hardware === "Memória RAM") qtdMemorias += item.qtd;
       if (item.hardware === "Processador") qtdProcessadores += item.qtd;
-      totalSeparados += item.qtd;
     });
 
     const recomendados = calcularQtdRecomendadaBlisters(itens);
@@ -468,7 +474,7 @@ if (!filtradas || filtradas.length === 0) {
           <button onclick="alternarStatusBlister(${emb.id}, '${emb.status}')">
             ${emb.status === "fechado" ? "🔓 Abrir" : "✅ Fechar"}
           </button>
-          <button onclick="excluirEmbalagem(${emb.id})">🗑️</button>
+          ${emb.status === "aberto" ? `<button onclick="abrirModalAddSku(${emb.id}, ${capacidade - ocup})">➕</button><button onclick="excluirEmbalagem(${emb.id})">🗑️</button>` : ""}
         </div>
       `;
       lista.appendChild(div);
@@ -499,6 +505,11 @@ function atualizarBarraProgresso(separados, preparados) {
   if (barraPreparados) {
     barraPreparados.style.width = `${percPreparados}%`;
     barraPreparados.textContent = `${percPreparados}% prontos`;
+  }
+  
+  const btnFinalizar = document.getElementById("btnFinalizarPreparacao");
+  if (btnFinalizar) {
+    btnFinalizar.disabled = percPreparados < 100;
   }
 }
 
@@ -742,6 +753,42 @@ async function confirmarNovaEmbalagem() {
   await carregarEmbalagens(pedidoIdAtual);
 }
 
+let embalagemSelecionada = null;
+let espacoDisponivel = 0;
+
+function abrirModalAddSku(id, disponivel) {
+  embalagemSelecionada = id;
+  espacoDisponivel = disponivel;
+  const select = document.getElementById('selectAddSku');
+  select.innerHTML = '';
+  dadosSeparados.forEach(item => {
+    if (item.qtd <= disponivel) {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = `${item.sku} - ${item.qtd} un`;
+      select.appendChild(opt);
+    }
+  });
+  document.getElementById('modalAddSku').classList.remove('hidden');
+}
+function fecharModalAddSku() {
+  document.getElementById('modalAddSku').classList.add('hidden');
+}
+async function confirmarAddSku() {
+  const select = document.getElementById('selectAddSku');
+  const itemId = select.value;
+  const item = dadosSeparados.find(i => i.id == itemId);
+  if (!item) return;
+  await fetch(`${API_URL}/embalagens/${embalagemSelecionada}/adicionar-sku`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_id: item.id, sku: item.sku, qtd: item.qtd })
+  });
+  fecharModalAddSku();
+  await carregarSkusSeparados();
+  await carregarEmbalagens(pedidoIdAtual);
+}
+
 function carregarPreparacao(pedidoId, numeroPedido) {
   document.getElementById("tituloPedidoPreparacao").textContent = numeroPedido;
   mostrarTela('telaPreparacao');
@@ -968,7 +1015,7 @@ function continuarPedido(pedido, id, tipo) {
 function confirmarNovoPedido() {
   const pedido = document.getElementById("pedidoInput").value.trim();
   if (!pedido) {
-    alert("Digite o número do pedido.");
+    mostrarAviso("❌ Digite o número do pedido", "#e74c3c");
     return;
   }
 
@@ -1329,6 +1376,24 @@ async function enviarPedido() {
   } catch (err) {
     console.error("Erro ao enviar pedido:", err);
     mostrarAviso("❌ Erro ao enviar pedido.", "#e74c3c");
+  }
+}
+async function finalizarPreparacao() {
+  try {
+    const res = await fetch(`${API_URL}/pedidos/${pedidoIdAtual}/finalizar`, {
+      method: 'PUT'
+    });
+    const data = await res.json();
+    if (data.success) {
+      mostrarAviso('✅ Preparação finalizada!', '#2ecc71');
+      mostrarTela('telaExpedicao');
+      carregarPedidosExpedicao();
+    } else {
+      mostrarAviso('❌ Falha ao finalizar.', '#e74c3c');
+    }
+  } catch (err) {
+    console.error('Erro ao finalizar preparação:', err);
+    mostrarAviso('❌ Erro ao finalizar preparação.', '#e74c3c');
   }
 }
 
@@ -1738,17 +1803,18 @@ function renderizarTabela() {
   const fim = inicio + itensPorPagina;
   const pagina = listaFiltradaSkus.slice(inicio, fim);
 
-  for (const sku of pagina) {
+  pagina.forEach((sku, i) => {
     const linha = document.createElement("tr");
 
     const pendente = skusPendentes.some((p) => p.SKU === sku.SKU);
+
+    const idx = inicio + i;
 
     linha.innerHTML = `
       <td>${sku.SKU}${pendente ? " 🕒" : ""}</td>
       <td>${sku.hardware}</td>
       <td>${sku.modelo}</td>
-      <td>${pendente ? '<span style="color: #f39c12;">Pendente</span>' : ""
-      }</td>
+      <td>${pendente ? '<span style="color: #f39c12;">Pendente</span>' : `<button onclick="abrirModalExcluirSku(${idx})">🗑️</button>`}</td>
     `;
 
     if (pendente) {
@@ -1756,7 +1822,7 @@ function renderizarTabela() {
     }
 
     tbody.appendChild(linha);
-  }
+  });
 
   // Atualiza paginação
   const totalPaginas = Math.ceil(listaFiltradaSkus.length / itensPorPagina);
@@ -1901,10 +1967,20 @@ function filtrarTabelaSkus() {
   renderizarTabela();
 }
 
-async function excluirSKU(index) {
+function abrirModalExcluirSku(index) {
+  indiceExcluir = index;
   const sku = listaFiltradaSkus[index];
-  if (!confirm(`Tem certeza que deseja excluir o SKU ${sku.SKU}?`)) return;
 
+  document.getElementById('modalMensagem').textContent = `Excluir o SKU ${sku.SKU}?`;
+  document.getElementById('modalExcluir').classList.remove('hidden');
+}
+
+function fecharModalExcluir() {
+  document.getElementById('modalExcluir').classList.add('hidden');
+}
+async function confirmarExcluirSku() {
+  if (indiceExcluir === null) return;
+  const sku = listaFiltradaSkus[indiceExcluir];
   try {
     const response = await fetch(
       `/api/excluir-sku/${encodeURIComponent(sku.SKU)}`,
@@ -1917,19 +1993,19 @@ async function excluirSKU(index) {
     );
 
     if (!response.ok) {
-      // tenta ler mensagem de erro do corpo
       const errorText = await response.text();
       throw new Error(errorText || "Erro desconhecido ao excluir SKU");
     }
 
-    const msg = await response.text();
-    alert(msg);
-    await carregarSKUs(); // recarrega lista do servidor após exclusão
+    await carregarSKUs();
+    mostrarAviso("✅ SKU excluído com sucesso!", "#2ecc71");
     atualizarLista();
   } catch (err) {
     console.error("Erro ao excluir SKU:", err);
     mostrarAviso("❌ Erro ao excluir SKU: " + err.message, "#e74c3c");
   }
+  indiceExcluir = null;
+  fecharModalExcluir();
 }
 
 function salvarSKUs() {

@@ -94,11 +94,14 @@ body {
 }
 
 #iniciarPedido {
-    background-color:var(--preto2);
-    padding-top: 10px;
-    padding-bottom: 10px;
-    border-radius: 10px;
-    padding-left: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+#btnBotaoIniciar {
+    display: flex;
+    align-items: center;
+    justify-content: end;
 }
 
 .grid-preparacao {
@@ -425,6 +428,11 @@ body {
     margin-top: 90px;
 }
 
+#btnFinalizarPreparacao:disabled {
+    background: var(--cinza2);
+    cursor: not-allowed;
+}
+
 .progresso {
   background-color: var(--azul1);
   height: 100%;
@@ -457,12 +465,14 @@ body {
 }
 
 #barraTopo {
-  color: var(--branco1);
-  padding: 12px 20px;
+    background-color: var(--preto2);
+    border-radius: 10px 10px 0 0;
+    color: var(--branco1);
+    padding: 12px 20px 0px 20px;
   display: flex;
-  align-items: center;
+  align-items: end;
   font-family: sans-serif;
-  border-bottom: var(--cinza1) solid 5px;
+  border-bottom: var(--cinza2) solid 5px;
 }
 
 #botoesTopo {
@@ -470,9 +480,9 @@ body {
     align-items: center;
     gap: 10px;
     margin-left: 150px;
-    background-color: var(--cinza1);
-    padding: 5px;
-    border-radius: 5px;
+    background-color: var(--cinza2);
+    padding: 5px; 
+    border-radius: 5px 5px 0px 0px;
 }
 
 .icone-topo {
@@ -483,7 +493,7 @@ body {
 
 #pedidosRecentes {
     background-color: var(--preto1);
-    margin-top: 100px;
+    margin-top: 10px;
     padding: 15px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
@@ -498,11 +508,13 @@ body {
 .btnTopo {
   border: none;
   color: var(--branco1);
+  background-color: var(--cinza2);
   padding: 8px 16px;
   font-weight: bold;
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.3s ease;
+  box-shadow: 0px 0px 0px rgba(0, 0, 0, 0);
 }
 
 .btnTopo.ativo {
@@ -533,14 +545,14 @@ body {
 }
 
 .modal-content {
-    background: var(--cinza3);
+    background: var(--preto1);
     padding: 2rem;
     border-radius: 12px;
     width: 300px;
     text-align: center;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     border: var(--branco2) solid 2px;
-    animation: pulse 4s infinite;
+    animation: pulseWhite 4s infinite;
 }
 
 .tipo-buttons button {
@@ -555,8 +567,9 @@ body {
 }
 
 .tipo-buttons button.selecionado {
-    background: var(--verde2);
-    color: var(--cinza3);
+    background: var(--azul2);
+    color: var(--branco2);
+    border: var(--azul3) solid 3px;
 }
 
 #pedidoInput {
@@ -566,16 +579,22 @@ body {
 #confirmarPedido {
     margin-top: 15px;
     padding: 10px 20px;
-    background: var(--azul1);
+    background: var(--verde2);
     color: var(--branco1);
     border: none;
     border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
+    animation: pulseGreen 2s infinite;
+}
+
+#cancelarPedido {
+    background-color: var(--vermelho3);
+    margin-left: 5px;
 }
 
 #confirmarPedido:disabled {
-    background: var(--branco1);
+    background: var(--cinza1);
     cursor: not-allowed;
 }
 

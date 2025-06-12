@@ -299,6 +299,66 @@ app.post("/embalagens/distribuir", async (req, res) => {
 });
 
 //put
+app.put('/pedidos/:id/finalizar', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.execute(
+      `UPDATE estoque.pedidos SET fim = NOW(), status = 'preparado' WHERE id = ?`,
+      [id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao finalizar pedido:', err);
+    res.status(500).json({ error: 'Erro ao finalizar pedido' });
+  }
+});
+
+app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
+  const { id } = req.params;
+  const { item_id, sku, qtd } = req.body;
+  if (!item_id || !sku || !qtd) {
+    return res.status(400).json({ error: 'Dados obrigatórios ausentes' });
+  }
+
+  try {
+    const [[ocup]] = await db.execute(
+      'SELECT COALESCE(SUM(qtd),0) as ocupado FROM estoque.embalagens_itens WHERE embalagem_id = ?',
+      [id]
+    );
+    const capacidade = 25;
+    const disponivel = capacidade - ocup.ocupado;
+    const inserir = Math.min(qtd, disponivel);
+
+    const [exist] = await db.execute(
+      'SELECT id, qtd FROM estoque.embalagens_itens WHERE embalagem_id = ? AND sku = ?',
+      [id, sku]
+    );
+    if (exist.length) {
+      await db.execute('UPDATE estoque.embalagens_itens SET qtd = ? WHERE id = ?', [exist[0].qtd + inserir, exist[0].id]);
+    } else {
+      await db.execute('INSERT INTO estoque.embalagens_itens (embalagem_id, sku, qtd) VALUES (?, ?, ?)', [id, sku, inserir]);
+    }
+
+    const [[item]] = await db.execute('SELECT * FROM estoque.itens_separados WHERE id = ?', [item_id]);
+    if (item) {
+      if (inserir < item.qtd) {
+        await db.execute('UPDATE estoque.itens_separados SET qtd = ?, status = "separado" WHERE id = ?', [item.qtd - inserir, item_id]);
+        await db.execute('INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, status) VALUES (?, ?, ?, ?, ?, "preparado")', [item.pedido_id, item.sku, inserir, item.hardware, item.modelo]);
+      } else {
+        await db.execute('UPDATE estoque.itens_separados SET status = "preparado" WHERE id = ?', [item_id]);
+      }
+    }
+
+    if (ocup.ocupado + inserir >= capacidade) {
+      await db.execute('UPDATE estoque.embalagens SET status = "fechado" WHERE id = ?', [id]);
+    }
+
+    res.json({ success: true, inserido: inserir });
+  } catch (err) {
+    console.error('Erro ao adicionar SKU na embalagem:', err);
+    res.status(500).json({ error: 'Erro ao adicionar SKU' });
+  }
+});
 app.put("/pedidos/:id/voltar", async (req, res) => {
   const pedidoId = req.params.id;
 
