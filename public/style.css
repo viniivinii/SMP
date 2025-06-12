@@ -555,6 +555,30 @@ body {
     border-left: 4px solid var(--vermelho1);
 }
 
+.lotacao {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0;
+}
+
+.barra-lotacao {
+    flex: 1;
+    background: var(--cinza2);
+    height: 6px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.barra-lotacao div {
+    background: var(--verde1);
+    height: 100%;
+}
+
+.card-embalagem.fechado .barra-lotacao div {
+    background: var(--vermelho1);
+}
+
 .btn-adicionar {
   background-color: var(--azul1);
   color: var(--branco1);
@@ -1282,6 +1306,23 @@ tr {
 .paginacao-container span {
     font-weight: bold;
     font-size: 1rem;
+}
+
+.paginacao-coluna {
+    margin-top: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+
+.paginacao-coluna button {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    background: var(--cinza3);
+    color: #fff;
+    cursor: pointer;
 }
 
 .skus-pendentes {
