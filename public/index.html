@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="icon.png" type="image/png" />
+  <title>Controle de Memórias RAM</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div id="barraTopo">
+    <img src="logo.png" alt="Logo" style="height: 60px; margin-bottom: 20px" />
+    <div id="botoesTopo">
+      <button class="btnTopo" onclick="mostrarTela('telaEstoque')">📦 Estoque</button>
+      <button class="btnTopo" onclick="mostrarTela('telaExpedicao')">🚚 Expedição</button>      
+      <button class="btnTopo" id="btnHistorico" onclick="mostrarTela('telaHistorico')">📁 Ver Histórico</button>
+      <button class="btnTopo" id="btnNovoSKU"  onclick="mostrarTela('telaSkus')">🔍 Consultar SKU's</button>
+    </div>
+  </div>
+
+  <div id="telaEstoque" style="display: block;">
+    <div class="flex-row">
+      <h1>📦 Tela Estoque</h1>
+    </div>
+    <div id="telaInicio">
+      <div id="modalNovoPedido" class="modal hidden">
+        <div class="modal-content">
+          <h2>Novo Pedido</h2>
+          <label for="pedidoInput">Número do Pedido:</label>
+          <input type="text" id="pedidoInput" placeholder="Ex: 12345" />
+          <p>Selecione o tipo do pedido:</p>
+          <div class="tipo-buttons">
+            <button onclick="selecionarTipo('memoria')" id="btnMemoria">Memória</button>
+            <button onclick="selecionarTipo('processador')" id="btnProcessador">Processador</button>
+            <button onclick="selecionarTipo('ambos')" id="btnAmbos">Ambos</button>
+          </div>
+          <button id="confirmarPedido" onclick="confirmarNovoPedido()" disabled>Continuar</button>
+          <button onclick="fecharModalNovoPedido()" style="background: #bdc3c7; margin-left: 10px">Cancelar</button>
+        </div>
+      </div>
+      <div id="iniciarPedido">
+        <h2>📪 Iniciar Separação</h2>
+        <button id="btnIniciar" style="margin-top: 10px; margin-right: 10px" onclick="abrirModalNovoPedido()">🚀 Iniciar Pedido</button>
+      </div>
+      <div id="pedidosRecentes">
+        <h2>📬▪ Pedidos em Separação</h2>
+        <div id="listaPedidosEstoque" class="cards-pedidos"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="telaExpedicao" style="display: none;">
+    <div class="flex-row">
+      <h1>📦 Tela Expedição</h1>
+    </div>
+    <div id="listaPedidosExpedicao"></div>
+  </div>
+
+  <div id="telaPreparacao" style="display:none">
+    <div id="containerPreparacao">
+      <div class="flex-row">
+        <h2>Preparação do Pedido: <span id="tituloPedidoPreparacao"></span></h2>
+        <div class="barra-progresso-container">
+          <div class="barra-progresso" id="barraSeparados">
+            <div class="progresso" id="progressoSeparados" style="width: 0%;">0%</div>
+          </div>
+          <div class="barra-progresso" id="barraPreparados">
+            <div class="progresso" id="progressoPreparados" style="width: 0%;">0%</div>
+          </div>
+        </div>
+      </div>
+      <div class="cardsResumo">
+        <div id="resumoPreparacao" class="resumo-bloco"></div>        
+        <button id="btnFinalizarPreparacao" class="btn-icone" onclick="finalizarPreparacao()">Finalizar</button>
+      </div>
+    </div>
+  
+  <div class="grid-preparacao">
+    <div id="colunaSeparados" class="skus-separados">
+      <h3 class="titulo-coluna">📦 SKUs Separados</h3>
+      <div id="listaSeparados" class="lista-cards-preparacao"></div>
+    </div>
+    
+    <div id="colunaPreparados" class="skus-preparados">
+      <h3 class="titulo-coluna">SKUs Preparados</h3>
+      <div id="listaPreparados" class="lista-cards-preparacao"></div>
+    </div>
+    
+    <div id="colunaBlisters" class="blisters">
+      <h3 class="titulo-coluna">📦 Embalagem</h3>
+      <button id="btnNovoBlister" onclick="abrirModalEmbalagem()">Adicionar</button>
+      <div id="listaEmbalagens"></div>
+    </div>
+  </div>
+  
+  <!-- Modal para adicionar processadores -->
+  <div id="modalCaixas" class="modal hidden">
+    <div class="modal-content">
+      <h3>Adicionar Processador</h3>
+      <label>Quantas caixas deseja usar?</label>
+      <input type="number" id="qtdCaixas" min="1" value="1">
+      <div id="listaCaixasExistentes" style="margin-top: 10px;"></div>
+      <button onclick="confirmarAdicaoProcessador()">Confirmar</button>
+      <button onclick="fecharModalCaixas()" class="btn-cancel">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal para Adicionar Embalagem-->
+  <div id="modalEmbalagem" class="modal hidden">
+    <div class="modal-content">
+      <h3>Adicionar Embalagens</h3>
+    
+      <p>Selecione o tipo de embalagem:</p>
+      <div class="tipo-buttons">
+        <button onclick="selecionarTipoEmbalagem('blister')" id="btnBlister">Blister</button>
+        <button onclick="selecionarTipoEmbalagem('caixa')" id="btnCaixa">Caixa</button>
+      </div>
+
+      <label for="qtdEmbalagem" style="margin-top:10px;">Quantidade:</label>
+      <input type="number" id="qtdEmbalagem" min="1" value="1" />
+
+      <div class="modal-buttons">
+        <button onclick="confirmarNovaEmbalagem()">➕ Criar</button>
+        <button onclick="fecharModalEmbalagem()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+
+  
+  <!-- Modal para adicionar a blisters -->
+  <div id="modalBlisters" class="modal hidden">
+    <div class="modal-content">
+      <h3>Adicionar a Blister</h3>
+      <div id="listaBlistersDisponiveis"></div>
+      <button onclick="fecharModalBlisters()" class="btn-cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+  <div id="telaPedido" class="hidden" style="display: none;">
+    <div class="telaPedidoSKU">
+      <div class="flex-row">
+        <div style="margin-right: 20px">
+          <label for="sku">SKU:</label>
+          <input type="text" id="sku" placeholder="Ex: apenas números" />
+        </div>
+        <div>
+          <label for="qtdItem">Qtd. de Memórias:</label>
+          <input type="number" id="qtdItem" min="1" placeholder="Ex: 50" />
+        </div>
+        <button id="btnAdicionar" onclick="adicionarSKU()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+      <div class="flex-row" style="margin-top: 10px">
+        <input type="checkbox" id="dissipador" />
+        <label for="dissipador">Com dissipador (22 por blister)</label>
+      </div>
+    </div>
+    <div id="resumoPedido" class="resumo-bloco"></div>
+    <div class="flex-row">
+      <h2>📦 SKUs Selecionados</h2>
+      <button id="btnFinalizar" onclick="enviarPedido()">💾 Enviar Pedido</button>
+    </div>
+    <div id="listaSkusSeparados" class="lista-cards" style="margin-top:15px;"></div>
+  </div>
+
+  <div id="telaHistorico" class="hidden">
+    <h3>📜 Histórico de Pedidos</h3>
+    <div class="pesquisa-historico-container">
+      <input type="text" id="pesquisaHistorico" placeholder="🔍 Pesquisar pedido..." oninput="carregarHistoricoPaginado()" />
+    </div>
+    <div id="historicoContainer"></div>
+    <div id="paginacaoHistorico" class="paginacao-container"></div>
+  </div>
+
+  <div id="telaSKU">
+    <div id="telaGerenciarSkus" class="hidden">
+      <h3>📦 Lista de SKUs</h3>
+      <div id="listaDeSkus" style="margin-bottom: 20px"></div>
+    </div>
+    <div id="telaSkus" class="hidden">
+      <div id="adicionarNovoSku">
+        <h3>Adicionar Novo SKU</h3>
+        <div class="form-novo-sku">
+          <input type="text" id="novoSkuCodigo" placeholder="PC----" />
+          <select id="novoSkuHardware">
+            <option value="Memória RAM">Memória RAM</option>
+            <option value="Processador">Processador</option>
+          </select>
+          <input type="text" id="novoSkuModelo" placeholder="Modelo do item" />
+          <button class="btnSalvarSKU" onclick="adicionarSkuPendente()">➕</button>
+        </div>
+        <div id="skusPendentes" class="skus-pendentes"><i>Nenhum SKU pendente para adicionar.</i></div>
+      </div>
+      <div class="flex-row">
+        <h3>📦 Lista de SKUs</h3>
+        <input type="text" id="pesquisaSku" placeholder="🔍 Pesquisar SKU ou modelo..." oninput="filtrarTabelaSkus()" />
+        <button class="btnSalvarJSON" onclick="enviarSkusPendentes()">💾 Salvar SKUs</button>
+      </div>
+      <table id="tabelaSkus">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Hardware</th>
+            <th>Modelo</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="listaTabelaSkus"></tbody>
+      </table>
+      <div class="paginacao">
+        <button id="btnAnterior" onclick="paginaAnterior()">◀ Anterior</button>
+        <span id="paginaAtual">1 / 1</span>
+        <button id="btnProximo" onclick="proximaPagina()">Próxima ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+
+  <div id="avisoDinamico" class="aviso-dinamico hidden"></div>
+  <div id="modalExcluir" class="modal hidden">
+    <div class="modal-content">
+      <p id="modalMensagem">Tem certeza que deseja excluir este SKU?</p>
+      <div class="modal-buttons">
+        <button id="btnConfirmarExcluir" class="btn-confirm">Sim, excluir</button>
+        <button onclick="fecharModalExcluir()" class="btn-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
