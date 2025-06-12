@@ -68,9 +68,9 @@
           <div class="barra-progresso" id="barraSeparados">
             <div class="progresso" id="progressoSeparados" style="width: 0%;">0%</div>
           </div>
-          <div class="barra-progresso" id="barraPreparados">
+          <!-- <div class="barra-progresso" id="barraPreparados">
             <div class="progresso" id="progressoPreparados" style="width: 0%;">0%</div>
-          </div>
+          </div> -->
         </div>
       </div>
       <div class="cardsResumo">
@@ -81,7 +81,7 @@
   
   <div class="grid-preparacao">
     <div id="colunaSeparados" class="skus-separados">
-      <h3 class="titulo-coluna">📦 SKUs Separados</h3>
+      <h3 class="titulo-coluna">SKUs Separados</h3>
       <div id="listaSeparados" class="lista-cards-preparacao"></div>
         <div class="paginacao-coluna">
           <button id="btnSepAnt" onclick="paginaAnteriorSeparados()">⬅️</button>
@@ -101,13 +101,15 @@
     </div>
     
     <div id="colunaBlisters" class="blisters">
-      <h3 class="titulo-coluna">📦 Embalagem</h3>
-      <button id="btnNovoBlister" onclick="abrirModalEmbalagem()">Adicionar</button>
-      <select id="filtroEmbalagens" onchange="filtrarEmbalagens()" style="margin-top:6px; width:100%;">
-        <option value="todas">Todas</option>
-        <option value="aberto">Abertas</option>
-        <option value="fechado">Fechadas</option>
-      </select>
+      <h3 class="titulo-coluna">Embalagem</h3>
+      <div id="campoBtnFiltro">
+        <button id="btnNovoBlister" onclick="abrirModalEmbalagem()">Adicionar</button>
+        <select id="filtroEmbalagens" onchange="filtrarEmbalagens()">
+          <option value="todas">Todas</option>
+          <option value="aberto">Abertas</option>
+          <option value="fechado">Fechadas</option>
+        </select>
+      </div>
       <div id="listaEmbalagens"></div>
       <div class="paginacao-coluna">
         <button id="btnEmbAnterior" onclick="paginaAnteriorEmbalagens()">⬅️</button>

@@ -3,16 +3,20 @@
     --cinza2: #808488;
     --cinza3: #666A6D;
     --cinza4: #4D5052;
-    --verde1: #2ecc71;
-    --verde2: #003300;
-    --vermelho1: #ed5565;
-    --vermelho2: #da4453;
-    --azul1: #5d9cec;
-    --azul2: #4a89dc;
+    --verde2: #34d399;
+    --verde2: #22c55e;
+    --verde3: #4ade80;
+    --vermelho2: #f87171;
+    --vermelho2: #ef4444;
+    --vermelho3: #dc2626;
+    --azul1: #60a5fa;
+    --azul2: #3b82f6;
+    --azul3: #2563eb;
     --branco1: #f5f7fa;
     --branco2: #e6e9ed;
-    --amarelo1: #ffce54;
-    --amarelo2: #fcbb42;
+    --amarelo1: #fde68a;
+    --amarelo2: #fcd34d;
+    --amarelo3: #fbbf24;
     --preto1: #3C3B3D;
     --preto2: #323133;
     --preto3: #1C1D1E;
@@ -20,7 +24,7 @@
 
 @keyframes pulseRed {
     0% {
-        box-shadow: 0 0 0 0 rgba(243, 29, 29, 0.7);
+        box-shadow: 0 0 0 0 var(--vermelho3);
     }
     70% {
         box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
@@ -32,7 +36,7 @@
 
 @keyframes pulseGreen {
     0% {
-        box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
+        box-shadow: 0 0 0 0 var(--verde2);
     }
     70% {
         box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
@@ -44,7 +48,7 @@
 
 @keyframes pulseBlue {
     0% {
-        box-shadow: 0 0 0 0 rgba(12, 106, 212, 0.7);
+        box-shadow: 0 0 0 0 var(--azul2);
     }
     70% {
         box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
@@ -56,7 +60,19 @@
 
 @keyframes pulseYellow {
     0% {
-        box-shadow: 0 0 0 0 rgba(213, 228, 7, 0.932);
+        box-shadow: 0 0 0 0 var(--amarelo2);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
+    }
+}
+
+@keyframes pulseWhite {
+    0% {
+        box-shadow: 0 0 0 0 var(--branco2);
     }
     70% {
         box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
@@ -119,6 +135,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  width: 300px;
 }
 
 .blisters {
@@ -146,13 +163,13 @@ body {
 }
 
 .card-preparado {
-  background-color: #1e1e1e;
+  background-color: var(--cinza4);
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 12px;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.1);
   color: #eee;
   font-family: 'Segoe UI', sans-serif;
+  border: var(--cinza3) solid 2px;
 }
 
 .card-preparado-topo {
@@ -192,7 +209,6 @@ body {
   color: #bbb;
   margin-bottom: 3px;
 }
-
 
 .card-preparacao {
   background: var(--cinza3);
@@ -239,29 +255,29 @@ body {
 
 
 .barra-lotacao div {
-    background: var(--verde1);
+    background: var(--verde2);
     height: 100%;
 }
 
 .card-embalagem.fechado .barra-lotacao div {
-    background: var(--vermelho1);
+    background: var(--vermelho2);
 }
 
 #btnPrepararPedido {
-    background: var(--verde1);
+    background: var(--verde2);
     color: var(--branco1);
     animation: pulseGreen 4s infinite;
   margin-top: 10px;
 }
 
 #btnVoltarPedido {
-    background: var(--vermelho1);
+    background: var(--vermelho2);
     color: var(--branco1);
     margin-left: 10px;
 }
 
 .btn-preparar {
-    background: var(--verde1);
+    background: var(--verde2);
     color: var(--branco1);
     margin-top: 7px;
     width: 180px;
@@ -274,7 +290,7 @@ body {
 }
 
 .btn-preparar:hover {
-    background-color: var(--verde1);
+    background-color: var(--verde2);
 }
 
 .modal {
@@ -384,6 +400,23 @@ body {
 
 #btnNovoBlister {
     width: 100%;
+    border-radius: 10px;
+}
+
+#campoBtnFiltro {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+}
+
+#campoBtnFiltro option {
+    background-color: var(--cinza1);
+}
+
+#filtroEmbalagens {
+    background-color: var(--cinza2);
+    width: 100%;
+    border-radius: 10px;
 }
 
 #btnFinalizarPreparacao {
@@ -404,11 +437,11 @@ body {
 }
 
 #progressoSeparados {
-  background-color: var(--amarelo1);
+  background-color: var(--azul2);
 }
 
 #progressoPreparados {
-  background-color: var(--verde1);
+  background-color: var(--verde2);
 }
 
 .aviso {
@@ -420,7 +453,7 @@ body {
 .erro-carregamento {
   text-align: center;
   padding: 20px;
-  color: var(--vermelho1);
+  color: var(--vermelho2);
 }
 
 #barraTopo {
@@ -474,6 +507,7 @@ body {
 
 .btnTopo.ativo {
   background: var(--cinza4);
+  animation: pulseWhite 2s infinite;
 }
 
 .btn-ir-expedicao:hover {
@@ -521,7 +555,7 @@ body {
 }
 
 .tipo-buttons button.selecionado {
-    background: var(--verde1);
+    background: var(--verde2);
     color: var(--cinza3);
 }
 
@@ -579,7 +613,7 @@ body {
 }
 
 .card-preparacao.fechado {
-  border: 3px solid var(--verde1);
+  border: 3px solid var(--verde2);
 }
 
 .card-preparacao.aberto {
@@ -595,11 +629,11 @@ body {
 }
 
 .card-embalagem.aberto {
-    border-left: 4px solid var(--verde1);
+    border-left: 4px solid var(--verde2);
 }
 
 .card-embalagem.fechado {
-    border-left: 4px solid var(--vermelho1);
+    border-left: 4px solid var(--vermelho2);
 }
 
 .btn-adicionar {
@@ -614,7 +648,7 @@ body {
 }
 
 .btn-fechar {
-  background-color: var(--verde1);
+  background-color: var(--verde2);
   color: var(--branco1);
   border: none;
   padding: 8px 12px;
@@ -643,13 +677,13 @@ body {
 }
 
 .card-pedido .continuar {
-    background: var(--verde1);
-    color: var(--verde2);
+    background: var(--verde2);
+    color: var(--branco1);
     animation: pulseGreen 4s infinite;
 }
 
 .card-pedido .cancelar {
-    background: var(--vermelho1);
+    background: var(--vermelho2);
     color: var(--branco1);
     margin-left: 10px;
 }
@@ -724,7 +758,7 @@ body {
 }
 
 .btn-remover-sku {
-  background-color: var(--vermelho1);
+  background-color: var(--vermelho2);
   border: none;
   color: var(--branco1);
   padding: 10px;
@@ -736,7 +770,8 @@ body {
 }
 
 .btn-remover-sku:hover {
-  background-color: var(--vermelho1);
+  background-color: var(--vermelho2);
+  animation: pulseRed 2s infinite;
 }
 
 
@@ -1058,12 +1093,12 @@ button {
 }
 
 .btn-excluir:hover {
-    background-color: var(--vermelho1);
+    background-color: var(--vermelho2);
     transform: scale(1.03);
 }
 
 .btn-remover:hover {
-    background-color: var(--vermelho1);
+    background-color: var(--vermelho2);
     transform: scale(1.03);
 }
 
@@ -1192,12 +1227,12 @@ button:hover {
 }
 
 .btnExcluirSKU:hover {
-    background-color: var(--vermelho1);
+    background-color: var(--vermelho2);
     transform: scale(1.03);
 }
 
 .btn-icone {
-  background-color: var(--verde1);
+  background-color: var(--verde2);
   border: none;
   padding: 10px;
   border-radius: 8px;
@@ -1270,7 +1305,7 @@ tr {
 }
 
 .sku-pendente {
-    background-color: var(--amarelo1) !important;
+    background-color: var(--amarelo2) !important;
 }
 
 .sku-pendente td {
@@ -1283,7 +1318,7 @@ tr {
 }
 
 .lista-pendentes li {
-    background-color: var(--amarelo1);
+    background-color: var(--amarelo2);
     padding: 5px 10px;
     margin-bottom: 4px;
     border-radius: 6px;

@@ -148,7 +148,7 @@ function carregarPedidosExpedicao() {
         lista.innerHTML = "<p>Nenhum pedido separado no momento.</p>";
         return;
       }
-
+      
       pedidos.forEach((p) => {
         const card = document.createElement("div");
         card.className = "card-expedicao";
@@ -493,7 +493,7 @@ function atualizarBarraProgresso(separados, preparados) {
 
   if (barraSeparados) {
     barraSeparados.style.width = `${percSeparados}%`;
-    barraSeparados.textContent = `${percSeparados}% separados`;
+    barraSeparados.textContent = `${percSeparados}% Preparado`;
   }
 
   if (barraPreparados) {
