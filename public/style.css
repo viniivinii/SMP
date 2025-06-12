@@ -204,6 +204,48 @@ body {
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
+.lotacao {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0;
+}
+
+.barra-lotacao {
+    flex: 1;
+    background: var(--cinza2);
+    height: 6px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.paginacao-coluna {
+    margin-top: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+
+.paginacao-coluna button {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    background: var(--cinza3);
+    color: #fff;
+    cursor: pointer;
+}
+
+
+.barra-lotacao div {
+    background: var(--verde1);
+    height: 100%;
+}
+
+.card-embalagem.fechado .barra-lotacao div {
+    background: var(--vermelho1);
+}
+
 #btnPrepararPedido {
     background: var(--verde1);
     color: var(--branco1);

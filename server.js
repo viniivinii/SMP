@@ -185,7 +185,7 @@ app.post('/embalagens', async (req, res) => {
   }
 });
 app.post("/embalagens/distribuir", async (req, res) => {
-  const { pedido_id, sku, qtd, hardware, dissipador } = req.body;
+  const { pedido_id, item_id, sku, qtd, hardware, dissipador } = req.body;
 
   if (!pedido_id || !sku || !qtd || !hardware) {
     return res.status(400).json({ error: "Faltam dados obrigatórios" });
@@ -211,6 +211,8 @@ app.post("/embalagens/distribuir", async (req, res) => {
 
     let restante = qtd;
 
+    let distribuido = 0;
+
     for (const blister of blisters) {
       const capacidadeDisponivel = porBlister - blister.ocupado;
 
@@ -218,12 +220,27 @@ app.post("/embalagens/distribuir", async (req, res) => {
 
       const inserir = Math.min(restante, capacidadeDisponivel);
 
-      await db.execute(`
-        INSERT INTO estoque.embalagens_itens (embalagem_id, sku, qtd)
-        VALUES (?, ?, ?)
-      `, [blister.id, sku, inserir]);
+// Verifica se já existe o SKU no blister
+      const [exist] = await db.execute(
+        `SELECT id, qtd FROM estoque.embalagens_itens WHERE embalagem_id = ? AND sku = ?`,
+        [blister.id, sku]
+      );
+
+      if (exist.length) {
+        await db.execute(
+          `UPDATE estoque.embalagens_itens SET qtd = ? WHERE id = ?`,
+          [exist[0].qtd + inserir, exist[0].id]
+        );
+      } else {
+        await db.execute(
+          `INSERT INTO estoque.embalagens_itens (embalagem_id, sku, qtd)
+           VALUES (?, ?, ?)`,
+          [blister.id, sku, inserir]
+        );
+      }
 
       restante -= inserir;
+      distribuido += inserir;
 
       // Fechar blister se atingir capacidade total
       const novoOcupado = blister.ocupado + inserir;
@@ -238,12 +255,42 @@ app.post("/embalagens/distribuir", async (req, res) => {
       if (restante <= 0) break;
     }
 
+     // Atualiza o item separado conforme o que foi distribuído
+    if (distribuido > 0 && item_id) {
+      const [rows] = await db.execute(
+        `SELECT * FROM estoque.itens_separados WHERE id = ?`,
+        [item_id]
+      );
+      if (rows.length) {
+        const item = rows[0];
+        if (distribuido < item.qtd) {
+          // Atualiza quantidade restante no item original
+          await db.execute(
+            `UPDATE estoque.itens_separados SET qtd = ?, status = 'separado' WHERE id = ?`,
+            [item.qtd - distribuido, item_id]
+          );
+          // Cria novo registro marcado como preparado
+          await db.execute(
+            `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, status)
+             VALUES (?, ?, ?, ?, ?, 'preparado')`,
+            [item.pedido_id, item.sku, distribuido, item.hardware, item.modelo]
+          );
+        } else {
+          await db.execute(
+            `UPDATE estoque.itens_separados SET status = 'preparado' WHERE id = ?`,
+            [item_id]
+          );
+        }
+      }
+    }
+
+
     // Caso ainda sobre, avisa
     if (restante > 0) {
       return res.status(206).json({ warning: `Parcialmente distribuído. Faltaram ${restante} unidades. Crie mais blisters.` });
     }
 
-    res.json({ success: true });
+    res.json({ success: true, distribuido});
 
   } catch (err) {
     console.error("Erro ao distribuir SKU em blisters:", err);
@@ -273,17 +320,35 @@ app.put("/pedidos/:id/voltar", async (req, res) => {
 });
 app.put("/itens-preparados/:id", async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, qtd } = req.body;
 
   try {
-    const [resultado] = await db.execute(
-      "UPDATE estoque.itens_separados SET status = ? WHERE id = ?",
-      [status, id]
+    const [rows] = await db.execute(
+      `SELECT * FROM estoque.itens_separados WHERE id = ?`,
+      [id]
     );
 
-    if (resultado.affectedRows === 0) {
-      return res.status(404).json({ error: "Item não encontrado." });
+    const item = rows[0];
+    const qtdPrep = qtd ? parseInt(qtd, 10) : item.qtd;
+
+    if (qtdPrep < item.qtd) {
+      await db.execute(
+        `UPDATE estoque.itens_separados SET qtd = ?, status = 'separado' WHERE id = ?`,
+        [item.qtd - qtdPrep, id]
+      );
+
+      await db.execute(
+        `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, status)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [item.pedido_id, item.sku, qtdPrep, item.hardware, item.modelo, status]
+      );
+    } else {
+      await db.execute(
+        `UPDATE estoque.itens_separados SET status = ? WHERE id = ?`,
+        [status, id]
+      );
     }
+
 
     res.json({ success: true });
   } catch (err) {

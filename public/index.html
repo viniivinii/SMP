@@ -83,17 +83,32 @@
     <div id="colunaSeparados" class="skus-separados">
       <h3 class="titulo-coluna">📦 SKUs Separados</h3>
       <div id="listaSeparados" class="lista-cards-preparacao"></div>
+        <div class="paginacao-coluna">
+          <button id="btnSepAnt" onclick="paginaAnteriorSeparados()">⬅️</button>
+          <span id="paginaSeparados">1 / 1</span>
+          <button id="btnSepProx" onclick="proximaPaginaSeparados()">➡️</button>
+      </div>
     </div>
     
     <div id="colunaPreparados" class="skus-preparados">
       <h3 class="titulo-coluna">SKUs Preparados</h3>
       <div id="listaPreparados" class="lista-cards-preparacao"></div>
+      <div class="paginacao-coluna">
+        <button id="btnPrepAnt" onclick="paginaAnteriorPreparados()">⬅️</button>
+        <span id="paginaPreparados">1 / 1</span>
+        <button id="btnPrepProx" onclick="proximaPaginaPreparados()">➡️</button>
+      </div>
     </div>
     
     <div id="colunaBlisters" class="blisters">
       <h3 class="titulo-coluna">📦 Embalagem</h3>
       <button id="btnNovoBlister" onclick="abrirModalEmbalagem()">Adicionar</button>
       <div id="listaEmbalagens"></div>
+      <div class="paginacao-coluna">
+        <button id="btnEmbAnterior" onclick="paginaAnteriorEmbalagens()">⬅️</button>
+        <span id="paginaEmbalagens">1 / 1</span>
+        <button id="btnEmbProximo" onclick="proximaPaginaEmbalagens()">➡️</button>
+      </div>
     </div>
   </div>
   

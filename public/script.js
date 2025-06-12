@@ -24,6 +24,17 @@ let historicoTotalPaginas = 1;
 
 let tipoSelecionado = null;
 
+let dadosSeparados = [];
+let dadosPreparados = [];
+let dadosEmbalagens = [];
+let skusPorEmbalagem = {};
+
+let paginaSeparados = 1;
+let paginaPreparados = 1;
+let paginaEmbalagens = 1;
+
+const itensPorPaginaPreparacao = 10;
+
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnHistorico").addEventListener("click", () => {
     atualizarHistoricoDoBanco();
@@ -156,42 +167,21 @@ async function carregarSkusSeparados() {
     
     const itens = await response.json();
     console.log("Itens recebidos:", itens);
-    
-    const listaSeparados = document.getElementById("listaSeparados");
-    listaSeparados.innerHTML = "";
-
-    let totalSeparados = 0;
-    let totalPreparados = 0;
 
     const itensSeparados = itens.filter(item => item.status === "separado");
     const itensPreparados = itens.filter(item => item.status === "preparado");
-    
 
-    totalSeparados = itensSeparados.reduce((sum, item) => sum + item.qtd, 0);
-    totalPreparados = itensPreparados.reduce((sum, item) => sum + item.qtd, 0);
+    dadosSeparados = itensSeparados;
+    dadosPreparados = itensPreparados;
+    paginaSeparados = 1;
+    paginaPreparados = 1;
 
-    if (itensSeparados.length === 0) {
-      listaSeparados.innerHTML = "<p class='aviso'>Nenhum SKU para preparar</p>";
-    } else {
-      itensSeparados.forEach(item => {
-        const card = document.createElement("div");
-        card.className = "card-preparacao";
-        card.innerHTML = `
-          <div class="card-header">
-            <strong>${item.sku}</strong>
-            <span class="qtd">${item.qtd} un</span>
-          </div>
-          <div class="card-body">
-            <em>${item.modelo || 'Modelo não cadastrado'}</em>
-          </div>
-          <button class="btn-preparar" 
-                  onclick="prepararItem(${item.id}, '${item.hardware}', ${item.qtd})">
-            Adicionar
-          </button>
-        `;
-        listaSeparados.appendChild(card);
-      });
-    }
+  
+    const totalSeparados = itensSeparados.reduce((sum, item) => sum + item.qtd, 0);
+    const totalPreparados = itensPreparados.reduce((sum, item) => sum + item.qtd, 0);
+
+    renderizarSeparadosPaginado();
+    renderizarPreparadosPaginado();
 
     atualizarBarraProgresso(totalPreparados, totalSeparados + totalPreparados);
 
@@ -219,9 +209,23 @@ async function carregarSkusSeparados() {
 
 async function carregarEmbalagens(pedidoIdAtual) {
   try {
-    const res = await fetch(`https://10.10.2.94:5501/embalagens/${pedidoIdAtual}`);
-    const embalagens = await res.json();
-    renderizarEmbalagens(embalagens);
+    const [resEmb, resSkus] = await Promise.all([
+      fetch(`${API_URL}/embalagens/${pedidoIdAtual}`),
+      fetch(`${API_URL}/sku-emblist/${pedidoIdAtual}`)
+    ]);
+
+    dadosEmbalagens = await resEmb.json();
+    const itens = await resSkus.json();
+
+    skusPorEmbalagem = {};
+    itens.forEach(i => {
+      if (!skusPorEmbalagem[i.embalagem_id]) skusPorEmbalagem[i.embalagem_id] = [];
+      skusPorEmbalagem[i.embalagem_id].push({ sku: i.sku, qtd: i.qtd });
+    });
+
+    paginaEmbalagens = 1;
+
+    renderizarEmbalagensPaginado();
     atualizarResumoPreparacao();
   } catch (err) {
     console.error("Erro ao carregar embalagens:", err);
@@ -351,6 +355,7 @@ async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         pedido_id: pedidoIdAtual,
+        item_id: itemId,
         sku,
         qtd,
         hardware,
@@ -411,41 +416,53 @@ async function alternarStatusBlister(id, statusAtual) {
 }
 
 
-function renderizarEmbalagens(embalagens) {
+function renderizarEmbalagensPaginado() {
   const lista = document.getElementById("listaEmbalagens");
   lista.innerHTML = "";
 
-  if (!embalagens || embalagens.length === 0) {
+if (!dadosEmbalagens || dadosEmbalagens.length === 0) {
     lista.innerHTML = "<p>Nenhuma embalagem criada.</p>";
-    return;
+  } else {
+    const inicio = (paginaEmbalagens - 1) * itensPorPaginaPreparacao;
+    const pagina = dadosEmbalagens.slice(inicio, inicio + itensPorPaginaPreparacao);
+
+      pagina.forEach((emb) => {
+      const div = document.createElement("div");
+      div.className = `card-embalagem ${emb.status === "fechado" ? "fechado" : "aberto"}`;
+
+      const ocup = emb.ocupado || 0;
+      const capacidade = 25;
+      const perc = Math.round((ocup / capacidade) * 100);
+      const itens = skusPorEmbalagem[emb.id] || [];
+      const listaOculta = itens.map(i => `<li>${i.sku} - ${i.qtd} un</li>`).join("") || "<li>Vazio</li>";
+
+
+ div.innerHTML = `
+        <div class="header-embalagem">
+          <strong>${emb.tipo.toUpperCase()} #${emb.id}</strong>
+          <span>${emb.status === "fechado" ? "🔒 Fechado" : "🟢 Aberto"}</span>
+        </div>
+        <div class="lotacao">
+          <div class="barra-lotacao"><div style="width:${perc}%"></div></div>
+          <span>${perc}%</span>
+        </div>
+        <button class="btn-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">Ver SKUs</button>
+        <ul class="lista-embalagens hidden">${listaOculta}</ul>
+        <div class="acoes">
+          <button onclick="alternarStatusBlister(${emb.id}, '${emb.status}')">
+            ${emb.status === "fechado" ? "🔓 Abrir" : "✅ Fechar"}
+          </button>
+          <button onclick="excluirEmbalagem(${emb.id})">🗑️</button>
+        </div>
+      `;
+      lista.appendChild(div);
+    });
   }
 
-  const abertos = embalagens.filter(e => e.status === "aberto");
-  const fechados = embalagens.filter(e => e.status === "fechado");
-  const todos = [...abertos, ...fechados];
-
-  todos.forEach((emb) => {
-    const div = document.createElement("div");
-    div.className = `card-embalagem ${emb.status === "fechado" ? "fechado" : "aberto"}`;
-
-    const total = emb.total_itens || 0;
-    const conteudo = emb.conteudo || "Vazio";
-
-    div.innerHTML = `
-      <div class="header-embalagem">
-        <strong>${emb.tipo.toUpperCase()} #${emb.id}</strong>
-        <span>${emb.status === "fechado" ? "🔒 Fechado" : "🟢 Aberto"}</span>
-      </div>
-      <div class="conteudo">🧠 ${total} itens<br>${conteudo}</div>
-      <div class="acoes">
-        <button onclick="alternarStatusBlister(${emb.id}, '${emb.status}')">
-          ${emb.status === "fechado" ? "🔓 Abrir" : "✅ Fechar"}
-        </button>
-        <button onclick="excluirEmbalagem(${emb.id})">🗑️</button>
-      </div>
-    `;
-    lista.appendChild(div);
-  });
+  const totalPag = Math.ceil((dadosEmbalagens.length || 0) / itensPorPaginaPreparacao) || 1;
+  document.getElementById("paginaEmbalagens").textContent = `${paginaEmbalagens} / ${totalPag}`;
+  document.getElementById("btnEmbAnterior").disabled = paginaEmbalagens === 1;
+  document.getElementById("btnEmbProximo").disabled = paginaEmbalagens === totalPag;
 }
 
 function atualizarBarraProgresso(separados, preparados) {
@@ -469,12 +486,116 @@ function atualizarBarraProgresso(separados, preparados) {
   }
 }
 
+function renderizarSeparadosPaginado() {
+  const area = document.getElementById("listaSeparados");
+  area.innerHTML = "";
+
+  if (dadosSeparados.length === 0) {
+    area.innerHTML = "<p class='aviso'>Nenhum SKU para preparar</p>";
+  } else {
+    const inicio = (paginaSeparados - 1) * itensPorPaginaPreparacao;
+    const pagina = dadosSeparados.slice(inicio, inicio + itensPorPaginaPreparacao);
+
+    pagina.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "card-preparacao";
+      card.innerHTML = `
+        <div class="card-header">
+          <strong>${item.sku}</strong>
+          <span class="qtd">${item.qtd} un</span>
+        </div>
+        <div class="card-body">
+          <em>${item.modelo || 'Modelo não cadastrado'}</em>
+        </div>
+        <button class="btn-preparar" onclick="prepararItem(${item.id}, '${item.hardware}', ${item.qtd})">Adicionar</button>
+      `;
+      area.appendChild(card);
+    });
+  }
+
+  const total = Math.ceil((dadosSeparados.length || 0) / itensPorPaginaPreparacao) || 1;
+  document.getElementById("paginaSeparados").textContent = `${paginaSeparados} / ${total}`;
+  document.getElementById("btnSepAnt").disabled = paginaSeparados === 1;
+  document.getElementById("btnSepProx").disabled = paginaSeparados === total;
+}
+
+function renderizarPreparadosPaginado() {
+  const area = document.getElementById("listaPreparados");
+  area.innerHTML = "";
+
+  if (dadosPreparados.length === 0) {
+    area.innerHTML = "<p class='aviso'>Nenhum SKU preparado</p>";
+  } else {
+    const inicio = (paginaPreparados - 1) * itensPorPaginaPreparacao;
+    const pagina = dadosPreparados.slice(inicio, inicio + itensPorPaginaPreparacao);
+
+    pagina.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "card-preparado";
+      card.innerHTML = `
+        <strong>${item.sku}</strong> - ${item.qtd} un
+      `;
+      area.appendChild(card);
+    });
+  }
+
+  const total = Math.ceil((dadosPreparados.length || 0) / itensPorPaginaPreparacao) || 1;
+  document.getElementById("paginaPreparados").textContent = `${paginaPreparados} / ${total}`;
+  document.getElementById("btnPrepAnt").disabled = paginaPreparados === 1;
+  document.getElementById("btnPrepProx").disabled = paginaPreparados === total;
+}
+
+function paginaAnteriorSeparados() {
+  if (paginaSeparados > 1) {
+    paginaSeparados--;
+    renderizarSeparadosPaginado();
+  }
+}
+
+function proximaPaginaSeparados() {
+  const total = Math.ceil(dadosSeparados.length / itensPorPaginaPreparacao);
+  if (paginaSeparados < total) {
+    paginaSeparados++;
+    renderizarSeparadosPaginado();
+  }
+}
+
+function paginaAnteriorPreparados() {
+  if (paginaPreparados > 1) {
+    paginaPreparados--;
+    renderizarPreparadosPaginado();
+  }
+}
+
+function proximaPaginaPreparados() {
+  const total = Math.ceil(dadosPreparados.length / itensPorPaginaPreparacao);
+  if (paginaPreparados < total) {
+    paginaPreparados++;
+    renderizarPreparadosPaginado();
+  }
+}
+
+function paginaAnteriorEmbalagens() {
+  if (paginaEmbalagens > 1) {
+    paginaEmbalagens--;
+    renderizarEmbalagensPaginado();
+  }
+}
+
+function proximaPaginaEmbalagens() {
+  const total = Math.ceil(dadosEmbalagens.length / itensPorPaginaPreparacao);
+  if (paginaEmbalagens < total) {
+    paginaEmbalagens++;
+    renderizarEmbalagensPaginado();
+  }
+}
+
 async function prepararItem(itemId, hardware, qtd) {
   try {
     const resposta = await fetch(`${API_URL}/itens-preparados/${itemId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "preparado" })
+      body: JSON.stringify({ status: "preparado", qtd})
     });
 
     if (!resposta.ok) throw new Error("Erro ao preparar item");
