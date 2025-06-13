@@ -467,6 +467,15 @@ app.get("/pedidosexp", async (req, res) => {
     res.status(500).send("Erro no servidor");
   }
 });
+app.get("/pedidosprep", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM estoque.pedidos WHERE status = 'preparado'");
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao buscar pedidos preparados:", err);
+    res.status(500).send("Erro no servidor");
+  }
+});
 app.get("/pedidos/:id", async (req, res) => {
   const pedidoId = req.params.id;
 

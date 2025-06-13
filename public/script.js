@@ -15,6 +15,12 @@ let listaCompletaSKUs = [];
 let listaFiltradaSKUs = [];
 const { jsPDF } = window.jspdf;
 
+let itensPorPagina = 10;
+let paginaAtual = 1;
+let listaCompletaSkus = [];
+let listaFiltradaSkus = [];
+let skusPendentes = [];
+
 let blistersAbertos = [];
 let caixasAbertas = [];
 
@@ -43,9 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnHistorico").addEventListener("click", () => {
-    atualizarHistoricoDoBanco();
-  });
   carregarSKUs();
 });
 
@@ -293,7 +296,6 @@ async function renderizarSkusPreparadosExpandido() {
   }
 }
 
-
 function calcularQtdRecomendadaBlisters(itens) {
   const dissipador = false; // se quiser usar lógica futura de checkbox
   const porBlister = dissipador ? 22 : 25;
@@ -401,7 +403,6 @@ async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware) {
   }
 }
 
-
 async function excluirEmbalagem(id) {
   try {
     await fetch(`https://10.10.2.94:5501/embalagens/${id}`, {
@@ -431,7 +432,6 @@ async function alternarStatusBlister(id, statusAtual) {
     mostrarAviso("❌ Falha ao atualizar status da embalagem", "#e74c3c");
   }
 }
-
 
 function renderizarEmbalagensPaginado() {
   const lista = document.getElementById("listaEmbalagens");
@@ -896,7 +896,6 @@ function adicionarAoBlister(itemId, hardware, qtd, pedidoId) {
   }
 }
 
-
 function voltarParaEstoqueStatus(idPedido) {
   fetch(`https://10.10.2.94:5501/pedidos/${idPedido}/voltar`, {
     method: "PUT"
@@ -916,32 +915,10 @@ function voltarParaEstoqueStatus(idPedido) {
     });
 }
 
-// Carrega pedidos do banco de dados
 async function atualizarHistoricoDoBanco() {
   try {
-    const response = await fetch("https://10.10.2.94:5501/pedidos");
-
-    if (!response.ok) {
-      throw new Error("Erro ao buscar pedidos do banco de dados.");
-    }
-
-    const listaDoBanco = await response.json();
-
-    // Transforma a lista em objeto indexado pelo nome do pedido
-    const pedidosFormatados = {};
-    listaDoBanco.forEach((p) => {
-      pedidosFormatados[p.pedido] = {
-        id: p.id,
-        inicio: p.inicio,
-        fim: p.fim,
-        skus: p.skus || [],
-      };
-    });
-
-    // Atualiza as variáveis globais e o localStorage
-    pedidos = pedidosFormatados;
-    localStorage.setItem("pedidosRAM", JSON.stringify(pedidosFormatados));
-
+    const data = await (await fetch(`${API_URL}/pedidosprep`)).json();
+    historicoPedidos = data;
     mostrarHistorico();
   } catch (erro) {
     console.error("Erro ao atualizar histórico:", erro);
@@ -1314,6 +1291,7 @@ area.appendChild(div);
       mostrarAviso("❌ Erro ao buscar SKUs.", "#e74c3c");
     });
 }
+
 function removerSku(id) {
   if (!confirm("Tem certeza que deseja remover este SKU?")) return;
 
@@ -1332,7 +1310,6 @@ function removerSku(id) {
     mostrarAviso("❌ Erro ao remover SKU.", "#e74c3c");
   });
 }
-
 
 function removerSKU(index) {
   pedidos[pedidoAtual].skus.splice(index, 1);
@@ -1396,25 +1373,23 @@ async function finalizarPreparacao() {
     mostrarAviso('❌ Erro ao finalizar preparação.', '#e74c3c');
   }
 }
-
 function mostrarHistorico() {
   mostrarTela('telaHistorico');
 
   historicoPaginaAtual = 1;
   carregarHistoricoPaginado();
 }
-function carregarHistoricoPaginado() {
+async function carregarHistoricoPaginado() {
   const container = document.getElementById("historicoContainer");
   container.innerHTML = "";
 
   const filtro = document
     .getElementById("pesquisaHistorico")
     .value.toLowerCase();
-  const listaPedidos = Object.entries(pedidos).filter(([pedido, _dados]) =>
-    pedido.toLowerCase().includes(filtro)
+  const listaPedidos = historicoPedidos.filter((p) =>
+    p.pedido.toLowerCase().includes(filtro)
   );
 
-  // ⬅️ Aqui está o cálculo correto de total de páginas
   historicoTotalPaginas = Math.ceil(
     listaPedidos.length / historicoItensPorPagina
   );
@@ -1425,85 +1400,63 @@ function carregarHistoricoPaginado() {
   const inicio = (historicoPaginaAtual - 1) * historicoItensPorPagina;
   const fim = inicio + historicoItensPorPagina;
   const pedidosPagina = listaPedidos.slice(inicio, fim);
-
-  pedidosPagina.forEach(([pedido, pedidoData]) => {
-    let totalMemorias = 0;
-    let totalBlisters = 0;
-    let totalProcessadores = 0;
-    let totalCaixas = 0;
-
-    pedidoData.skus.forEach((item) => {
-      if (item.hardware === "Processador") {
-        totalProcessadores += item.qtdProcessadores || 0;
-        totalCaixas += item.qtdCaixas || 0;
-      } else {
-        totalMemorias += item.qtdMemorias || 0;
-        totalBlisters += item.qtdBlisters || 0;
-      }
-    });
-
-    const totalItens = totalMemorias + totalProcessadores;
-
+  
+  for(const pedido of pedidosPagina) {
     const pedidoDiv = document.createElement("div");
     pedidoDiv.className = "pedido-container";
 
-    let blocosResumoHTML = '<div class="resumo-blocos">';
-    if (totalMemorias > 0 || totalBlisters > 0) {
-      blocosResumoHTML += `
-        <div class="bloco-memoria">
-          <strong>Memória(s):</strong> ${totalMemorias}<br>
-          <strong>Blister(s):</strong> ${totalBlisters}
-        </div>`;
+    let totalBlisters = 0;
+
+    try {
+      const embalagens = await fetch(`${API_URL}/embalagens/${pedido.id}`).then((r) => r.json());
+      totalBlisters = embalagens.filter((e) => e.tipo === "blister").length;
+    } catch (err) {
+      console.error("Erro ao buscar embalagens:", err);
     }
-    if (totalProcessadores > 0 || totalCaixas > 0) {
-      blocosResumoHTML += `
-        <div class="bloco-processador">
-          <strong>Processador(es):</strong> ${totalProcessadores}<br>
-          <strong>Caixa(s):</strong> ${totalCaixas}
-        </div>`;
+
+    let skusMap = {};
+    try {
+      const dados = await fetch(`${API_URL}/sku-emblist/${pedido.id}`).then((r) => r.json());
+      dados.forEach((d) => {
+        if (d.tipo !== "blister") return;
+        if (!skusMap[d.sku]) skusMap[d.sku] = [];
+        skusMap[d.sku].push({ id: d.embalagem_id, qtd: d.qtd });
+      });
+    } catch (err) {
+      console.error("Erro ao buscar SKUs:", err);
     }
-    blocosResumoHTML += "</div>";
+
+     const skusHTML = Object.entries(skusMap)
+      .map(
+        ([sku, bls]) => `
+        <div class="sku-blister">
+          <strong>${sku}</strong>
+          <select>
+            ${bls
+              .map(
+                (b) => `<option>Blister #${b.id} - Qtd: ${b.qtd}</option>`
+              )
+              .join("")}
+          </select>
+        </div>
+      `
+      )
+      .join("");
 
     pedidoDiv.innerHTML = `
-      <h4 class="pedido-titulo">Pedido ${pedido}</h4>
-      ${blocosResumoHTML}
-      <div class="total-itens-container">
-        <div class="total-itens-bloco">
-          <strong>Total de Itens:</strong> ${totalItens}
-        </div>
-        <button class="toggle-skus-btn" onclick="toggleSKUs(this)">☰</button>
-      </div>
-      <div class="skus-container hidden">
-        ${pedidoData.skus
-        .map(
-          (item) => `
-          <div class="sku-card">
-            <strong>SKU:</strong> ${item.sku}<br>
-            <strong>${item.hardware}</strong> - ${item.modelo}<br>
-            ${item.hardware === "Processador"
-              ? `<strong>Quantidade:</strong> ${item.qtdProcessadores || 0
-              }<br>
-                 <strong>Caixa(s):</strong> ${item.qtdCaixas || 0}`
-              : `<strong>Quantidade:</strong> ${item.qtdMemorias || 0}<br>
-                 <strong>Blister(s):</strong> ${item.qtdBlisters || 0}`
-            }
-          </div>
-        `
-        )
-        .join("")}
-      </div>
+      <h4 class="pedido-titulo">Pedido ${pedido.pedido}</h4>
+      <p><strong>ID:</strong> ${pedido.id}</p>
+      <p><strong>Enviado:</strong> ${pedido.inicio ? new Date(pedido.inicio).toLocaleDateString() : ""}</p>
+      <p><strong>Total de Blisters:</strong> ${totalBlisters}</p>
+      ${skusHTML}
       <div class="pedido-botoes">
-        <button onclick="gerarPDF('${pedido}')" class="btn-imprimir">🖨️ Imprimir</button>
-        <button onclick="excluirPedido('${pedido}')" class="btn-excluir">🗑️ Excluir</button>
+        <button onclick="gerarPDF(${pedido.id})" class="btn-imprimir">🖨️ Imprimir</button>
       </div>
     `;
-
     container.appendChild(pedidoDiv);
-  });
-
+  }
   atualizarControlesPaginacaoHistorico();
 }
-
 function atualizarControlesPaginacaoHistorico() {
   const paginacao = document.getElementById("paginacaoHistorico");
   paginacao.innerHTML = `
@@ -1544,16 +1497,18 @@ function excluirPedido(pedido) {
   }
   mostrarAviso(`🗑️ Pedido ${pedido} excluído.`, "#e74c3c");
 }
-function gerarPDF(pedido) {
+async function gerarPDF(pedidoId) {
   const doc = new jsPDF();
-  const pedidoData = pedidos[pedido];
+  const pedidoObj = historicoPedidos.find(p => p.id === pedidoId);
+  if (!pedidoObj) return;
+  const itens = await fetch(`${API_URL}/itens/${pedidoId}`).then(r => r.json());
 
   // Cabeçalho
   doc.setFillColor(50);
   doc.rect(0, 0, 210, 20, "F");
   doc.setTextColor(255);
   doc.setFontSize(14);
-  doc.text(`Relatório do Pedido ${pedido}`, 10, 13);
+  doc.text(`Relatório do Pedido ${pedidoObj.pedido}`, 10, 13);
 
   let y = 30;
   const cardWidth = 180;
@@ -1563,7 +1518,7 @@ function gerarPDF(pedido) {
   let totalItens = 0;
 
   // Cards individuais
-  pedidoData.skus.forEach((item) => {
+  itens.forEach((item) => {
     if (y + cardHeight > 270) {
       doc.addPage();
       y = 20;
@@ -1583,12 +1538,8 @@ function gerarPDF(pedido) {
     doc.text(modeloLines, 38, y + 21);
 
     const isProc = item.hardware === "Processador";
-    const qtdTotal = isProc
-      ? item.qtd || item.qtdProcessadores || 0
-      : item.qtdMemorias || item.qtd || 0;
-    const qtdBlisterOuCaixa = isProc
-      ? item.qtdCaixas || 0
-      : item.qtdBlisters || 0;
+    const qtdTotal = item.qtd || 0;
+    const qtdBlisterOuCaixa = 0;
     const label = isProc ? "Caixas" : "Blisters";
 
     totalItens += qtdTotal;
@@ -1639,16 +1590,12 @@ function gerarPDF(pedido) {
 
   rowY += 10;
 
-  pedidoData.skus.forEach((item) => {
+  itens.forEach((item) => {
     if (rowY + 10 > 280) return; // evita ultrapassar a página
 
     const isProc = item.hardware === "Processador";
-    const qtd = isProc
-      ? item.qtd || item.qtdProcessadores || 0
-      : item.qtdMemorias || item.qtd || 0;
-    const caixasOuBlisters = isProc
-      ? item.qtdCaixas || 0
-      : item.qtdBlisters || 0;
+    const qtd = item.qtd || 0;
+    const caixasOuBlisters = 0;
     const modeloLines = doc.splitTextToSize(item.modelo, colWidths[2] - 4);
 
     // Celulas da linha
@@ -1698,10 +1645,8 @@ function gerarPDF(pedido) {
     rowY += 10;
   });
 
-  doc.save(`pedido_${pedido}.pdf`);
+  doc.save(`pedido_${pedidoObj.pedido}.pdf`);
 }
-
-
 
 document.getElementById("sku").addEventListener("input", function () {
   const valor = this.value.trim();
@@ -1777,12 +1722,8 @@ function pesquisarSKU() {
     inputModelo.value = ""; // limpa o campo se não encontrar
   }
 }
+
 // Tela de SKUs
-let itensPorPagina = 10;
-let paginaAtual = 1;
-let listaCompletaSkus = [];
-let listaFiltradaSkus = [];
-let skusPendentes = [];
 
 function carregarSKUs() {
   fetch("https://10.10.2.94:5501/skus")
