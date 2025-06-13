@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require("path");
 const https = require("https");
-const mysql = require('mysql2/promise'); // Usando a versão promise
+const mysql = require('mysql2/promise');
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const express = require("express");
@@ -312,7 +312,6 @@ app.put('/pedidos/:id/finalizar', async (req, res) => {
     res.status(500).json({ error: 'Erro ao finalizar pedido' });
   }
 });
-
 app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
   const { id } = req.params;
   const { item_id, sku, qtd } = req.body;

@@ -1401,62 +1401,103 @@ async function carregarHistoricoPaginado() {
   const fim = inicio + historicoItensPorPagina;
   const pedidosPagina = listaPedidos.slice(inicio, fim);
   
-  for(const pedido of pedidosPagina) {
+  for (const pedido of pedidosPagina) {
     const pedidoDiv = document.createElement("div");
     pedidoDiv.className = "pedido-container";
 
-    let totalBlisters = 0;
-
+    let itens = [];
+    let embalagens = [];
+    let skusDados = [];
     try {
-      const embalagens = await fetch(`${API_URL}/embalagens/${pedido.id}`).then((r) => r.json());
-      totalBlisters = embalagens.filter((e) => e.tipo === "blister").length;
+      [itens, embalagens, skusDados] = await Promise.all([
+        fetch(`${API_URL}/itens/${pedido.id}`).then(r => r.json()),
+        fetch(`${API_URL}/embalagens/${pedido.id}`).then(r => r.json()),
+        fetch(`${API_URL}/sku-emblist/${pedido.id}`).then(r => r.json()),
+      ]);
     } catch (err) {
-      console.error("Erro ao buscar embalagens:", err);
+      console.error("Erro ao buscar dados do pedido:", err);
     }
 
-    let skusMap = {};
-    try {
-      const dados = await fetch(`${API_URL}/sku-emblist/${pedido.id}`).then((r) => r.json());
-      dados.forEach((d) => {
-        if (d.tipo !== "blister") return;
-        if (!skusMap[d.sku]) skusMap[d.sku] = [];
-        skusMap[d.sku].push({ id: d.embalagem_id, qtd: d.qtd });
-      });
-    } catch (err) {
-      console.error("Erro ao buscar SKUs:", err);
-    }
+    const qtdMemorias = itens
+      .filter(i => i.hardware === "Memória RAM")
+      .reduce((s, i) => s + i.qtd, 0);
+    const qtdProcessadores = itens
+      .filter(i => i.hardware === "Processador")
+      .reduce((s, i) => s + i.qtd, 0);
+    const totalItens = qtdMemorias + qtdProcessadores;
 
-     const skusHTML = Object.entries(skusMap)
-      .map(
-        ([sku, bls]) => `
-        <div class="sku-blister">
-          <strong>${sku}</strong>
-          <select>
-            ${bls
-              .map(
-                (b) => `<option>Blister #${b.id} - Qtd: ${b.qtd}</option>`
-              )
-              .join("")}
-          </select>
+    const qtdBlisters = embalagens.filter(e => e.tipo === "blister").length;
+    const qtdCaixas = embalagens.filter(e => e.tipo === "caixa").length;
+    const totalEmbalagens = embalagens.length;
+
+    const skusMap = {};
+    skusDados.forEach(({ sku, qtd, embalagem_id, tipo }) => {
+      if (!skusMap[sku]) skusMap[sku] = { qtd: 0, bls: [] };
+      skusMap[sku].qtd += qtd;
+      if (tipo === "blister") skusMap[sku].bls.push({ id: embalagem_id, qtd });
+    });
+
+         const skusHTML = Object.entries(skusMap)
+      .map(([sku, info]) => `
+        <div class="sku-card">
+          <div><strong>${sku}</strong></div>
+          <div><p>Quantidade: ${info.qtd}</p></div>
+          <div>
+            <select>
+              <option disabled selected>Ver embalagens</option>
+              ${info.bls
+                .map(b => `<option>Blister #${b.id} - Qtd: ${b.qtd}</option>`)
+                .join("")}
+            </select>
+          </div>
         </div>
-      `
-      )
+      `)
       .join("");
 
     pedidoDiv.innerHTML = `
-      <h4 class="pedido-titulo">Pedido ${pedido.pedido}</h4>
-      <p><strong>ID:</strong> ${pedido.id}</p>
-      <p><strong>Enviado:</strong> ${pedido.inicio ? new Date(pedido.inicio).toLocaleDateString() : ""}</p>
-      <p><strong>Total de Blisters:</strong> ${totalBlisters}</p>
-      ${skusHTML}
+      <div class="pedido-titulo">
+        <h4>Pedido ${pedido.pedido}</h4>
+      </div>
+      <div class="info-cards">
+        <div class="card-info">
+          <div><p>ID: ${pedido.id}</p></div>
+          <div><p>Data de envio: ${pedido.inicio ? new Date(pedido.inicio).toLocaleDateString() : ""}</p></div>
+          <div><p>Tipo: ${pedido.tipo}</p></div>
+        </div>
+        <div class="card-qtd">
+          <div class="mini-card">
+            <div><p>Qtd Memórias</p></div>
+            <div><p>${qtdMemorias}</p></div>
+            <div><p>Qtd Blisters</p></div>
+            <div><p>${qtdBlisters}</p></div>
+          </div>
+          <div class="mini-card">
+            <div><p>Qtd Processadores</p></div>
+            <div><p>${qtdProcessadores}</p></div>
+            <div><p>Qtd Caixas</p></div>
+            <div><p>${qtdCaixas}</p></div>
+          </div>
+          <div class="mini-card">
+            <div><p>Total de Itens</p></div>
+            <div><p>${totalItens}</p></div>
+            <div><p>Total de Embalagens</p></div>
+            <div><p>${totalEmbalagens}</p></div>
+          </div>
+        </div>
+      </div>
       <div class="pedido-botoes">
         <button onclick="gerarPDF(${pedido.id})" class="btn-imprimir">🖨️ Imprimir</button>
+        <button onclick="toggleSKUs(this)" class="btn-skus">Ver SKUs</button>
+      </div>
+      <div class="skus-container hidden">
+        ${skusHTML}
       </div>
     `;
     container.appendChild(pedidoDiv);
   }
   atualizarControlesPaginacaoHistorico();
 }
+
 function atualizarControlesPaginacaoHistorico() {
   const paginacao = document.getElementById("paginacaoHistorico");
   paginacao.innerHTML = `
