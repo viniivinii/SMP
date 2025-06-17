@@ -123,24 +123,24 @@ app.post("/itens", async (req, res) => {
     res.status(500).json({ error: "Erro ao salvar item separado" });
   }
 });
-app.post("/embalagens", async (req, res) => {
-  const { pedido_id, tipo, status } = req.body;
+// app.post("/embalagens", async (req, res) => {
+//   const { pedido_id, tipo, status } = req.body;
 
-  if (!pedido_id || !tipo || !status) {
-    return res.status(400).json({ error: "Dados obrigatórios ausentes" });
-  }
+//   if (!pedido_id || !tipo || !status) {
+//     return res.status(400).json({ error: "Dados obrigatórios ausentes" });
+//   }
 
-  try {
-    await db.execute(
-      "INSERT INTO estoque.embalagens (pedido_id, tipo, status) VALUES (?, ?, ?)",
-      [pedido_id, tipo, status]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Erro ao criar embalagem:", err);
-    res.status(500).json({ error: "Erro ao criar embalagem" });
-  }
-});
+//   try {
+//     await db.execute(
+//       "INSERT INTO estoque.embalagens (pedido_id, tipo, status) VALUES (?, ?, ?)",
+//       [pedido_id, tipo, status]
+//     );
+//     res.json({ success: true });
+//   } catch (err) {
+//     console.error("Erro ao criar embalagem:", err);
+//     res.status(500).json({ error: "Erro ao criar embalagem" });
+//   }
+// });
 app.post("/enviar", async (req, res) => {
   const { pedidoId, qtd_memoria, qtd_processador } = req.body;
 
@@ -436,8 +436,6 @@ app.put("/embalagens/:id/status", async (req, res) => {
   }
 });
 
-
-
 //get
 app.get('/skus', async (req, res) => {
   try {
@@ -571,12 +569,90 @@ app.delete('/excluir-sku/:sku', async (req, res) => {
 app.delete("/embalagens/:id", async (req, res) => {
   const embalagemId = req.params.id;
 
+  const conn = await db.getConnection();
   try {
-    await db.execute("DELETE FROM estoque.embalagens WHERE id = ?", [embalagemId]);
+    await conn.beginTransaction();
+
+    const [[emb]] = await conn.execute(
+      "SELECT pedido_id FROM estoque.embalagens WHERE id = ?",
+      [embalagemId]
+    );
+    if (!emb) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Embalagem não encontrada" });
+    }
+
+    const pedidoId = emb.pedido_id;
+    const [itens] = await conn.execute(
+      "SELECT sku, qtd FROM estoque.embalagens_itens WHERE embalagem_id = ?",
+      [embalagemId]
+    );
+
+    for (const { sku, qtd } of itens) {
+      let restante = qtd;
+      while (restante > 0) {
+        const [[prep]] = await conn.execute(
+          `SELECT id, qtd, hardware, modelo FROM estoque.itens_separados
+           WHERE pedido_id = ? AND sku = ? AND status = 'preparado' LIMIT 1`,
+          [pedidoId, sku]
+        );
+        if (!prep) break;
+
+        const remover = Math.min(prep.qtd, restante);
+        const novoQtd = prep.qtd - remover;
+        if (novoQtd > 0) {
+          await conn.execute(
+            "UPDATE estoque.itens_separados SET qtd = ? WHERE id = ?",
+            [novoQtd, prep.id]
+          );
+        } else {
+          await conn.execute(
+            "DELETE FROM estoque.itens_separados WHERE id = ?",
+            [prep.id]
+          );
+        }
+
+        const [sepRows] = await conn.execute(
+          `SELECT id FROM estoque.itens_separados
+           WHERE pedido_id = ? AND sku = ? AND status = 'separado'`,
+          [pedidoId, sku]
+        );
+
+        if (sepRows.length) {
+          await conn.execute(
+            "UPDATE estoque.itens_separados SET qtd = qtd + ? WHERE id = ?",
+            [remover, sepRows[0].id]
+          );
+        } else {
+          await conn.execute(
+            `INSERT INTO estoque.itens_separados
+             (pedido_id, sku, qtd, hardware, modelo, status)
+             VALUES (?, ?, ?, ?, ?, 'separado')`,
+            [pedidoId, sku, remover, prep.hardware, prep.modelo]
+          );
+        }
+
+        restante -= remover;
+      }
+    }
+
+    await conn.execute(
+      "DELETE FROM estoque.embalagens_itens WHERE embalagem_id = ?",
+      [embalagemId]
+    );
+    await conn.execute(
+      "DELETE FROM estoque.embalagens WHERE id = ?",
+      [embalagemId]
+    );
+
+    await conn.commit();
     res.json({ success: true });
   } catch (err) {
+    await conn.rollback();
     console.error("Erro ao excluir embalagem:", err);
     res.status(500).json({ error: "Erro ao excluir embalagem" });
+      } finally {
+    conn.release();
   }
 });
 app.delete("/itens/:id", async (req, res) => {
@@ -600,7 +676,6 @@ app.delete("/pedidos/:id", async (req, res) => {
     res.status(500).send("Erro ao cancelar pedido");
   }
 });
-
 
 // Configurações HTTPS
 const options = {

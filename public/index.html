@@ -62,21 +62,23 @@
   </div>
 
   <div id="telaPreparacao" style="display:none">
-    <h2>Preparação Pedido: <span id="tituloPedidoPreparacao"> - </span><span id="idPedidoPreparacao"></span></h2>
+    <div class="flex-song">
+      <h2>Preparação Pedido: <span id="tituloPedidoPreparacao"> - </span><span id="idPedidoPreparacao"></span></h2>
+      <button id="btnFinalizarPreparacao" class="btn-icone" onclick="finalizarPreparacao()"disabled>Finalizar</button>
+    </div>
     <div id="containerPreparacao">
       <div class="flex-row">
         <div class="barra-progresso-container">
-          <div class="barra-progresso" id="barraSeparados">
+          <!-- <div class="barra-progresso" id="barraSeparados">
             <div class="progresso" id="progressoSeparados" style="width: 0%;">0%</div>
-          </div>
-          <!-- <div class="barra-progresso" id="barraPreparados">
-            <div class="progresso" id="progressoPreparados" style="width: 0%;">0%</div>
           </div> -->
+          <div class="barra-progresso" id="barraPreparados">
+            <div class="progresso" id="progressoPreparados" style="width: 0%;">0%</div>
+          </div>
         </div>
       </div>
       <div class="cardsResumo">
         <div id="resumoPreparacao" class="resumo-bloco"></div>        
-        <button id="btnFinalizarPreparacao" class="btn-icone" onclick="finalizarPreparacao()"disabled>Finalizar</button>
       </div>
     </div>
   
@@ -85,9 +87,9 @@
       <h3 class="titulo-coluna">SKUs Separados</h3>
       <div id="listaSeparados" class="lista-cards-preparacao"></div>
         <div class="paginacao-coluna">
-          <button id="btnSepAnt" onclick="paginaAnteriorSeparados()">⬅️</button>
+          <button id="btnSepAnt" onclick="pgnAnteriorSep()">◀</button>
           <span id="paginaSeparados">1 / 1</span>
-          <button id="btnSepProx" onclick="proximaPaginaSeparados()">➡️</button>
+          <button id="btnSepProx" onclick="pgnProximoSep()">▶</button>
       </div>
     </div>
     
@@ -95,9 +97,9 @@
       <h3 class="titulo-coluna">SKUs Preparados</h3>
       <div id="listaPreparados" class="lista-cards-preparacao"></div>
       <div class="paginacao-coluna">
-        <button id="btnPrepAnt" onclick="paginaAnteriorPreparados()">⬅️</button>
+        <button id="btnPrepAnt" onclick="pgnAnteriorPre()">◀</button>
         <span id="paginaPreparados">1 / 1</span>
-        <button id="btnPrepProx" onclick="proximaPaginaPreparados()">➡️</button>
+        <button id="btnPrepProx" onclick="pgnProximoPre()">▶</button>
       </div>
     </div>
     
@@ -113,9 +115,9 @@
       </div>
       <div id="listaEmbalagens"></div>
       <div class="paginacao-coluna">
-        <button id="btnEmbAnterior" onclick="paginaAnteriorEmbalagens()">⬅️</button>
+        <button id="btnEmbAnterior" onclick="pgnAnteriorEmb()">◀</button>
         <span id="paginaEmbalagens">1 / 1</span>
-        <button id="btnEmbProximo" onclick="proximaPaginaEmbalagens()">➡️</button>
+        <button id="btnEmbProximo" onclick="pgnProximoEmb()">▶</button>
       </div>
     </div>
   </div>

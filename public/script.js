@@ -40,27 +40,19 @@ let paginaSeparados = 1;
 let paginaPreparados = 1;
 let paginaEmbalagens = 1;
 
-const itensPorPaginaPreparacao = 5;
+const itensPorPaginaPreparacao = 4;
 
 let indiceExcluir = null;
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btnConfirmarExcluir');
   if (btn) btn.addEventListener('click', confirmarExcluirSku);
 });
-
 window.addEventListener("DOMContentLoaded", () => {
   carregarSKUs();
 });
-
 window.onload = () => {
   mostrarTela('telaEstoque');
 };
-
-
-window.addEventListener(
-  "DOMContentLoaded",
-  carregarSKUsDoBanco
-);
 
 function mostrarTela(idTela) {
   const todasTelas = [
@@ -104,10 +96,9 @@ function mostrarTela(idTela) {
       break;
   }
 }
-// Carrega SKUs do banco de dados
 async function carregarSKUsDoBanco() {
   try {
-    const response = await fetch("https://10.10.2.94:5501/skus");
+    const response = await fetch(`${API_URL}/skus`);
     if (!response.ok) throw new Error("Erro ao buscar SKUs");
     skuData = await response.json();
     console.log("SKUs carregados do banco:", skuData);
@@ -117,7 +108,7 @@ async function carregarSKUsDoBanco() {
   }
 }
 function carregarPedidosEstoque() {
-  fetch("https://10.10.2.94:5501/pedidos")
+  fetch(`${API_URL}/pedidos`)
     .then(res => res.json())
     .then(pedidos => {
       const lista = document.getElementById("listaPedidosEstoque");
@@ -147,7 +138,7 @@ function carregarPedidosEstoque() {
     });
 }
 function carregarPedidosExpedicao() {
-  fetch("https://10.10.2.94:5501/pedidosexp")
+  fetch(`${API_URL}/pedidosexp`)
     .then((res) => res.json())
     .then((pedidos) => {
       const lista = document.getElementById("listaPedidosExpedicao");
@@ -176,12 +167,11 @@ function carregarPedidosExpedicao() {
       console.error("Erro ao carregar pedidos separados:", err);
     });
 }
-
 async function carregarSkusSeparados() {
   try {
     console.log(`Buscando itens para pedido ${pedidoIdAtual}`);
     
-    const response = await fetch(`https://10.10.2.94:5501/itens/${pedidoIdAtual}`);
+    const response = await fetch(`${API_URL}/itens/${pedidoIdAtual}`);
     
     if (!response.ok) {
       throw new Error(`Erro HTTP: ${response.status}`);
@@ -226,7 +216,6 @@ async function carregarSkusSeparados() {
 
   }
 }
-
 async function carregarEmbalagens(pedidoIdAtual) {
   try {
     const [resEmb, resSkus] = await Promise.all([
@@ -252,7 +241,6 @@ async function carregarEmbalagens(pedidoIdAtual) {
     mostrarAviso("❌ Erro ao carregar embalagens", "#e74c3c");
   }
 }
-
 async function renderizarSkusPreparadosExpandido() {
   try {
     const res = await fetch(`${API_URL}/sku-emblist/${pedidoIdAtual}`);
@@ -295,7 +283,6 @@ async function renderizarSkusPreparadosExpandido() {
     document.getElementById("listaPreparados").innerHTML = `<p class='aviso'>Erro ao carregar SKUs preparados</p>`;
   }
 }
-
 function calcularQtdRecomendadaBlisters(itens) {
   const dissipador = false; // se quiser usar lógica futura de checkbox
   const porBlister = dissipador ? 22 : 25;
@@ -307,12 +294,11 @@ function calcularQtdRecomendadaBlisters(itens) {
   const recomendados = Math.ceil(totalMemorias / porBlister);
   return recomendados;
 }
-
 async function atualizarResumoPreparacao() {
   try {
     const [itens, embalagens] = await Promise.all([
-      fetch(`https://10.10.2.94:5501/itens/${pedidoIdAtual}`).then(r => r.json()),
-      fetch(`https://10.10.2.94:5501/embalagens/${pedidoIdAtual}`).then(r => r.json()),
+      fetch(`${API_URL}/itens/${pedidoIdAtual}`).then(r => r.json()),
+      fetch(`${API_URL}/embalagens/${pedidoIdAtual}`).then(r => r.json()),
     ]);
 
     let qtdMemorias = 0;
@@ -354,7 +340,6 @@ async function atualizarResumoPreparacao() {
     console.error("Erro ao atualizar resumo:", error);
   }
 }
-
 async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware) {
   try {
     // Checar se há embalagens do tipo blister abertas
@@ -402,18 +387,18 @@ async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware) {
     mostrarAviso("❌ Falha ao distribuir SKU nos blisters", "#e74c3c");
   }
 }
-
 async function excluirEmbalagem(id) {
   try {
-    await fetch(`https://10.10.2.94:5501/embalagens/${id}`, {
+    await fetch(`${API_URL}/embalagens/${id}`, {
       method: "DELETE",
     });
+    await carregarSkusSeparados();
     await carregarEmbalagens(pedidoIdAtual);
   } catch (err) {
     console.error("Erro ao excluir embalagem:", err);
+    mostrarAviso("❌ Erro ao excluir embalagem", "#e74c3c");
   }
 }
-
 async function alternarStatusBlister(id, statusAtual) {
   const novoStatus = statusAtual === "fechado" ? "aberto" : "fechado";
 
@@ -432,7 +417,6 @@ async function alternarStatusBlister(id, statusAtual) {
     mostrarAviso("❌ Falha ao atualizar status da embalagem", "#e74c3c");
   }
 }
-
 function renderizarEmbalagensPaginado() {
   const lista = document.getElementById("listaEmbalagens");
   lista.innerHTML = "";
@@ -462,7 +446,7 @@ if (!filtradas || filtradas.length === 0) {
  div.innerHTML = `
         <div class="header-embalagem">
           <strong>${emb.tipo.toUpperCase()} #${emb.id}</strong>
-          <span>${emb.status === "fechado" ? "🔒 Fechado" : "🟢 Aberto"}</span>
+          <span>${emb.status === "fechado" ? "🔒" : "🔓"}</span>
         </div>
         <div class="lotacao">
           <div class="barra-lotacao"><div style="width:${perc}%"></div></div>
@@ -470,11 +454,16 @@ if (!filtradas || filtradas.length === 0) {
         </div>
         <button class="btn-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">Ver SKUs</button>
         <ul class="lista-embalagens hidden">${listaOculta}</ul>
-        <div class="acoes">
-          <button onclick="alternarStatusBlister(${emb.id}, '${emb.status}')">
-            ${emb.status === "fechado" ? "🔓 Abrir" : "✅ Fechar"}
+        <div class="acoesBts">
+          <button id="btnStatusBlister" data-status="${emb.status}" onclick="alternarStatusBlister(${emb.id}, '${emb.status}')">
+            ${emb.status === "fechado" ? "🔓 Abrir" : "🔒 Fechar"}
           </button>
-          ${emb.status === "aberto" ? `<button onclick="abrirModalAddSku(${emb.id}, ${capacidade - ocup})">➕</button><button onclick="excluirEmbalagem(${emb.id})">🗑️</button>` : ""}
+          ${emb.status === "aberto" ? `
+            <div class="btnAcaoBts">
+              <button id="btnAtribuirSku" onclick="abrirModalAddSku(${emb.id}, ${capacidade - ocup})">➕</button>
+              <button id="btnExcluirEmb" onclick="excluirEmbalagem(${emb.id})">🗑️</button>
+            </div>
+            ` : ""}
         </div>
       `;
       lista.appendChild(div);
@@ -486,7 +475,6 @@ if (!filtradas || filtradas.length === 0) {
   document.getElementById("btnEmbAnterior").disabled = paginaEmbalagens === 1;
   document.getElementById("btnEmbProximo").disabled = paginaEmbalagens === totalPag;
 }
-
 function atualizarBarraProgresso(separados, preparados) {
   const total = separados + preparados;
 
@@ -512,7 +500,6 @@ function atualizarBarraProgresso(separados, preparados) {
     btnFinalizar.disabled = percPreparados < 100;
   }
 }
-
 function renderizarSeparadosPaginado() {
   const area = document.getElementById("listaSeparados");
   area.innerHTML = "";
@@ -545,7 +532,6 @@ function renderizarSeparadosPaginado() {
   document.getElementById("btnSepAnt").disabled = paginaSeparados === 1;
   document.getElementById("btnSepProx").disabled = paginaSeparados === total;
 }
-
 function renderizarPreparadosPaginado() {
   const area = document.getElementById("listaPreparados");
   area.innerHTML = "";
@@ -571,45 +557,40 @@ function renderizarPreparadosPaginado() {
   document.getElementById("btnPrepAnt").disabled = paginaPreparados === 1;
   document.getElementById("btnPrepProx").disabled = paginaPreparados === total;
 }
-
-function paginaAnteriorSeparados() {
+//botoes de paginação tela preparação
+function pgnAnteriorSep() {
   if (paginaSeparados > 1) {
     paginaSeparados--;
     renderizarSeparadosPaginado();
   }
 }
-
-function proximaPaginaSeparados() {
+function pgnProximoSep() {
   const total = Math.ceil(dadosSeparados.length / itensPorPaginaPreparacao);
   if (paginaSeparados < total) {
     paginaSeparados++;
     renderizarSeparadosPaginado();
   }
 }
-
-function paginaAnteriorPreparados() {
+function pgnAnteriorPre() {
   if (paginaPreparados > 1) {
     paginaPreparados--;
     renderizarPreparadosPaginado();
   }
 }
-
-function proximaPaginaPreparados() {
+function pgnProximoPre() {
   const total = Math.ceil(dadosPreparados.length / itensPorPaginaPreparacao);
   if (paginaPreparados < total) {
     paginaPreparados++;
     renderizarPreparadosPaginado();
   }
 }
-
-function paginaAnteriorEmbalagens() {
+function pgnAnteriorEmb() {
   if (paginaEmbalagens > 1) {
     paginaEmbalagens--;
     renderizarEmbalagensPaginado();
   }
 }
-
-function proximaPaginaEmbalagens() {
+function pgnProximoEmb() {
     const filtradas = dadosEmbalagens.filter(e => {
     if (filtroStatusEmbalagem === 'todas') return true;
     return e.status === filtroStatusEmbalagem;
@@ -620,14 +601,13 @@ function proximaPaginaEmbalagens() {
     renderizarEmbalagensPaginado();
   }
 }
-
+//------------------------------------//
 function filtrarEmbalagens() {
   const select = document.getElementById('filtroEmbalagens');
   filtroStatusEmbalagem = select.value;
   paginaEmbalagens = 1;
   renderizarEmbalagensPaginado();
 }
-
 async function prepararItem(itemId, hardware, qtd, sku) {
   try {
         if (hardware === "Memória RAM") {
@@ -666,12 +646,10 @@ async function prepararItem(itemId, hardware, qtd, sku) {
     mostrarAviso("❌ Falha ao mover item", "#e74c3c");
   }
 }
-
-
 function adicionarNovaEmbalagem() {
   if (!pedidoIdAtual) return;
 
-  fetch("https://10.10.2.94:5501/embalagens", {
+  fetch(`${API_URL}/embalagens`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -694,15 +672,12 @@ function adicionarNovaEmbalagem() {
       mostrarAviso("❌ Erro no servidor.", "#e74c3c");
     });
 }
-
 function abrirModalEmbalagem() {
   document.getElementById("modalEmbalagem").classList.remove("hidden");
 }
-
 function fecharModalEmbalagem() {
   document.getElementById("modalEmbalagem").classList.add("hidden");
 }
-
 function selecionarTipoEmbalagem(tipo) {
   tipoSelecionado = tipo;
 
@@ -716,7 +691,6 @@ function selecionarTipoEmbalagem(tipo) {
     document.getElementById("btnCaixa").classList.add("ativo");
   }
 }
-
 async function confirmarNovaEmbalagem() {
   const quantidade = parseInt(document.getElementById("qtdEmbalagem").value);
 
@@ -732,7 +706,7 @@ async function confirmarNovaEmbalagem() {
 
   try {
     for (let i = 0; i < quantidade; i++) {
-      await fetch("https://10.10.2.94:5501/embalagens", {
+      await fetch(`${API_URL}/embalagens`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -788,7 +762,6 @@ async function confirmarAddSku() {
   await carregarSkusSeparados();
   await carregarEmbalagens(pedidoIdAtual);
 }
-
 function carregarPreparacao(pedidoId, numeroPedido) {
   document.getElementById("tituloPedidoPreparacao").textContent = numeroPedido;
   mostrarTela('telaPreparacao');
@@ -811,7 +784,6 @@ function carregarPreparacao(pedidoId, numeroPedido) {
       renderizarEmbalagens(embalagens);
     });
 }
-
 function renderizarSkusSeparados(lista, pedidoId) {
   const area = document.getElementById("listaSeparados");
   area.innerHTML = "";
@@ -828,11 +800,10 @@ function renderizarSkusSeparados(lista, pedidoId) {
     area.appendChild(div);
   });
 }
-
 async function adicionarABlister(itemId, blisterId, qtd) {
   try {
     // 1. Atualiza o item para "preparado" (PUT HTTP)
-    await fetch(`https://10.10.2.94:5501/itens/${itemId}`, {
+    await fetch(`${API_URL}/itens/${itemId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "preparado" })
@@ -840,7 +811,7 @@ async function adicionarABlister(itemId, blisterId, qtd) {
 
     // 2. Atualiza o status do blister (para 'fechado' se estiver cheio)
     const novoStatus = qtd >= 25 ? "fechado" : "aberto";
-    await fetch(`https://10.10.2.94:5501/embalagens/${blisterId}`, {
+    await fetch(`${API_URL}/embalagens/${blisterId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: novoStatus })
@@ -856,7 +827,6 @@ async function adicionarABlister(itemId, blisterId, qtd) {
     mostrarAviso(`❌ Falha: ${error.message}`, "#e74c3c");
   }
 }
-
 function iniciarPreparacao(id, numeroPedido) {
   pedidoIdAtual = id;
   pedidoAtual = numeroPedido;
@@ -866,7 +836,6 @@ function iniciarPreparacao(id, numeroPedido) {
   carregarSkusSeparados(); // <-- Corrigido aqui
   carregarEmbalagens(pedidoIdAtual);
 }
-
 function adicionarAoBlister(itemId, hardware, qtd, pedidoId) {
   if (hardware === "Processador") {
     const caixas = prompt("Quantas caixas deseja adicionar?");
@@ -895,9 +864,8 @@ function adicionarAoBlister(itemId, hardware, qtd, pedidoId) {
     }).then(() => carregarPreparacao(pedidoId, pedidoAtual));
   }
 }
-
 function voltarParaEstoqueStatus(idPedido) {
-  fetch(`https://10.10.2.94:5501/pedidos/${idPedido}/voltar`, {
+  fetch(`${API_URL}/pedidos/${idPedido}/voltar`, {
     method: "PUT"
   })
     .then(res => res.json())
@@ -914,11 +882,14 @@ function voltarParaEstoqueStatus(idPedido) {
       mostrarAviso("❌ Erro ao retornar pedido.", "#e74c3c");
     });
 }
-
 async function atualizarHistoricoDoBanco() {
   try {
     const data = await (await fetch(`${API_URL}/pedidosprep`)).json();
-    historicoPedidos = data;
+    const mapa = new Map();
+    data.forEach(p => {
+      if (!mapa.has(p.id)) mapa.set(p.id, p);
+    });
+    historicoPedidos = Array.from(mapa.values());
     mostrarHistorico();
   } catch (erro) {
     console.error("Erro ao atualizar histórico:", erro);
@@ -928,7 +899,6 @@ async function atualizarHistoricoDoBanco() {
     );
   }
 }
-
 function abrirModalNovoPedido() {
   document.getElementById("modalNovoPedido").classList.remove("hidden");
   tipoSelecionado = "";
@@ -943,7 +913,6 @@ function abrirModalNovoPedido() {
 function fecharModalNovoPedido() {
   document.getElementById("modalNovoPedido").classList.add("hidden");
 }
-
 function selecionarTipo(tipo) {
   tipoSelecionado = tipo;
   document.getElementById("confirmarPedido").disabled = false;
@@ -956,9 +925,8 @@ function selecionarTipo(tipo) {
     .getElementById(`btn${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`)
     .classList.add("selecionado");
 }
-
 function continuarPedido(pedido, id, tipo) {
-  fetch(`https://10.10.2.94:5501/pedidos/${id}`)
+  fetch(`${API_URL}/pedidos/${id}`)
     .then(res => res.json())
     .then(data => {
       // Atualiza variáveis globais
@@ -988,7 +956,6 @@ function continuarPedido(pedido, id, tipo) {
       mostrarAviso("❌ Erro ao recuperar pedido.", "#e74c3c");
     });
 }
-
 function confirmarNovoPedido() {
   const pedido = document.getElementById("pedidoInput").value.trim();
   if (!pedido) {
@@ -1000,7 +967,7 @@ function confirmarNovoPedido() {
 
   const inicio = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-  fetch("https://10.10.2.94:5501/iniciar", {
+  fetch(`${API_URL}/iniciar`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ pedido, inicio, tipo: tipoSelecionado }),
@@ -1040,11 +1007,10 @@ function confirmarNovoPedido() {
       mostrarAviso("❌ Erro ao criar pedido.", "#e74c3c");
     });
 }
-
 function cancelarPedido(id) {
   if (!confirm("Tem certeza que deseja cancelar este pedido?")) return;
 
-  fetch(`https://10.10.2.94:5501/pedidos/${id}`, {
+  fetch(`${API_URL}/pedidos/${id}`, {
     method: "DELETE",
   })
     .then((res) => {
@@ -1057,7 +1023,6 @@ function cancelarPedido(id) {
       mostrarAviso("Erro ao cancelar pedido.", "#e74c3c");
     });
 }
-
 function mostrarAviso(mensagem, cor = "#333") {
   const aviso = document.getElementById("avisoDinamico");
   aviso.textContent = mensagem;
@@ -1082,7 +1047,7 @@ function iniciarPedido() {
   const inicio = new Date().toISOString().slice(0, 19).replace("T", " ");
 
   console.trace("Chamando iniciarPedido");
-  fetch("https://10.10.2.94:5501/iniciar", {
+  fetch(`${API_URL}/iniciar`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ pedido, inicio }),
@@ -1161,7 +1126,7 @@ function adicionarSKU() {
     modelo
   };
 
-  fetch("https://10.10.2.94:5501/itens", {
+  fetch(`${API_URL}/itens`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -1190,11 +1155,10 @@ function adicionarSKU() {
   document.getElementById("qtdItem").value = "";
   document.getElementById("dissipador").checked = false;
 }
-
 function atualizarInterface() {
     if (!pedidoIdAtual) return;
 
-  fetch(`https://10.10.2.94:5501/itens/${pedidoIdAtual}`)
+  fetch(`${API_URL}/itens/${pedidoIdAtual}`)
     .then(res => {
       if (!res.ok) {
         console.warn("❌ Resposta HTTP inválida:", res.status);
@@ -1249,9 +1213,8 @@ function atualizarInterface() {
     });
     consultarSkusSeparados();
 }
-
 function consultarSkusSeparados() {
-  fetch(`https://10.10.2.94:5501/itens/${pedidoIdAtual}`)
+  fetch(`${API_URL}/itens/${pedidoIdAtual}`)
     .then(res => res.json())
     .then(itens => {
       const area = document.getElementById("listaSkusSeparados");
@@ -1291,11 +1254,10 @@ area.appendChild(div);
       mostrarAviso("❌ Erro ao buscar SKUs.", "#e74c3c");
     });
 }
-
 function removerSku(id) {
   if (!confirm("Tem certeza que deseja remover este SKU?")) return;
 
-  fetch(`https://10.10.2.94:5501/itens/${id}`, {
+  fetch(`${API_URL}/itens/${id}`, {
     method: "DELETE"
   })
   .then(res => {
@@ -1310,12 +1272,10 @@ function removerSku(id) {
     mostrarAviso("❌ Erro ao remover SKU.", "#e74c3c");
   });
 }
-
 function removerSKU(index) {
   pedidos[pedidoAtual].skus.splice(index, 1);
   atualizarInterface();
 }
-// Finalizar pedido
 async function enviarPedido() {
   try {
     const itens = await fetch(`${API_URL}/itens/${pedidoIdAtual}`).then(r => r.json());
@@ -1331,7 +1291,7 @@ async function enviarPedido() {
       }
     });
 
-   const res = await fetch("https://10.10.2.94:5501/enviar", {
+   const res = await fetch(`${API_URL}/enviar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1497,7 +1457,6 @@ async function carregarHistoricoPaginado() {
   }
   atualizarControlesPaginacaoHistorico();
 }
-
 function atualizarControlesPaginacaoHistorico() {
   const paginacao = document.getElementById("paginacaoHistorico");
   paginacao.innerHTML = `
@@ -1542,7 +1501,16 @@ async function gerarPDF(pedidoId) {
   const doc = new jsPDF();
   const pedidoObj = historicoPedidos.find(p => p.id === pedidoId);
   if (!pedidoObj) return;
-  const itens = await fetch(`${API_URL}/itens/${pedidoId}`).then(r => r.json());
+    const [itens, emb] = await Promise.all([
+    fetch(`${API_URL}/itens/${pedidoId}`).then(r => r.json()),
+    fetch(`${API_URL}/sku-emblist/${pedidoId}`).then(r => r.json())
+  ]);
+
+  const mapaEmbs = {};
+  emb.forEach(e => {
+    if (!mapaEmbs[e.sku]) mapaEmbs[e.sku] = new Set();
+    mapaEmbs[e.sku].add(e.embalagem_id);
+  });
 
   // Cabeçalho
   doc.setFillColor(50);
@@ -1580,7 +1548,7 @@ async function gerarPDF(pedidoId) {
 
     const isProc = item.hardware === "Processador";
     const qtdTotal = item.qtd || 0;
-    const qtdBlisterOuCaixa = 0;
+    const qtdBlisterOuCaixa = mapaEmbs[item.sku] ? mapaEmbs[item.sku].size : 0;
     const label = isProc ? "Caixas" : "Blisters";
 
     totalItens += qtdTotal;
@@ -1636,7 +1604,7 @@ async function gerarPDF(pedidoId) {
 
     const isProc = item.hardware === "Processador";
     const qtd = item.qtd || 0;
-    const caixasOuBlisters = 0;
+    const caixasOuBlisters = mapaEmbs[item.sku] ? mapaEmbs[item.sku].size : 0;
     const modeloLines = doc.splitTextToSize(item.modelo, colWidths[2] - 4);
 
     // Celulas da linha
@@ -1688,7 +1656,6 @@ async function gerarPDF(pedidoId) {
 
   doc.save(`pedido_${pedidoObj.pedido}.pdf`);
 }
-
 document.getElementById("sku").addEventListener("input", function () {
   const valor = this.value.trim();
   const codigoCompleto = "PC" + valor;
@@ -1765,9 +1732,8 @@ function pesquisarSKU() {
 }
 
 // Tela de SKUs
-
 function carregarSKUs() {
-  fetch("https://10.10.2.94:5501/skus")
+  fetch(`${API_URL}/skus`)
     .then((res) => res.json())
     .then((data) => {
       listaCompletaSkus = data;
@@ -1776,7 +1742,6 @@ function carregarSKUs() {
       renderizarTabela();
     });
 }
-
 function renderizarTabela() {
   const tbody = document.getElementById("listaTabelaSkus");
   tbody.innerHTML = "";
@@ -1814,7 +1779,6 @@ function renderizarTabela() {
   document.getElementById("btnAnterior").disabled = paginaAtual === 1;
   document.getElementById("btnProximo").disabled = paginaAtual === totalPaginas;
 }
-
 function paginaAnterior() {
   const totalPaginas = Math.ceil(listaFiltradaSkus.length / itensPorPagina);
   if (paginaAtual > 1) {
@@ -1824,7 +1788,6 @@ function paginaAnterior() {
   }
   renderizarTabela();
 }
-
 function proximaPagina() {
   const totalPaginas = Math.ceil(listaFiltradaSkus.length / itensPorPagina);
   if (paginaAtual < totalPaginas) {
@@ -1834,7 +1797,6 @@ function proximaPagina() {
   }
   renderizarTabela();
 }
-
 function atualizarListaPendentes() {
   const ul = document.getElementById("listaPendentesUl");
   ul.innerHTML = "";
@@ -1852,14 +1814,13 @@ function atualizarListaPendentes() {
     ul.appendChild(li);
   }
 }
-
 function enviarSkusPendentes() {
   if (skusPendentes.length === 0) {
     alert("Nenhum SKU para enviar.");
     return;
   }
 
-  fetch("https://10.10.2.94:5501/salvar-skus", {
+  fetch(`${API_URL}/salvar-skus`, {
     // <- Nome correto da rota que usa MySQL
     method: "POST",
     headers: {
@@ -1885,7 +1846,6 @@ function enviarSkusPendentes() {
   atualizarListaPendentes(); // Atualiza a lista pendente
   renderizarTabela(); // Atualiza a tabela após enviar
 }
-
 function mostrarSkusPendentes() {
   const container = document.getElementById("skusPendentes");
   container.innerHTML = "";
@@ -1909,7 +1869,6 @@ function mostrarSkusPendentes() {
     container.appendChild(div);
   });
 }
-
 function adicionarSkuPendente() {
   const codigo = document.getElementById("novoSkuCodigo").value.trim();
   const hardware = document.getElementById("novoSkuHardware").value;
@@ -1937,7 +1896,6 @@ function adicionarSkuPendente() {
   document.getElementById("novoSkuCodigo").value = "";
   document.getElementById("novoSkuModelo").value = "";
 }
-
 function filtrarTabelaSkus() {
   const termo = document.getElementById("pesquisaSku").value.toLowerCase();
   listaFiltradaSkus = listaCompletaSkus.filter(
@@ -1948,7 +1906,6 @@ function filtrarTabelaSkus() {
   paginaAtual = 1;
   renderizarTabela();
 }
-
 function abrirModalExcluirSku(index) {
   indiceExcluir = index;
   const sku = listaFiltradaSkus[index];
@@ -1956,7 +1913,6 @@ function abrirModalExcluirSku(index) {
   document.getElementById('modalMensagem').textContent = `Excluir o SKU ${sku.SKU}?`;
   document.getElementById('modalExcluir').classList.remove('hidden');
 }
-
 function fecharModalExcluir() {
   document.getElementById('modalExcluir').classList.add('hidden');
 }
@@ -1989,7 +1945,6 @@ async function confirmarExcluirSku() {
   indiceExcluir = null;
   fecharModalExcluir();
 }
-
 function salvarSKUs() {
   const skusCustomizados = JSON.parse(
     localStorage.getItem("skusCustomizados") || "[]"

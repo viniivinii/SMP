@@ -215,10 +215,10 @@ body {
 
 .card-preparacao {
   background: var(--cinza3);
-  border-left: 4px solid var(--amarelo1);
-  margin-bottom: 10px;
+  border-left: 4px solid var(--amarelo2);
+  margin-bottom: 5px;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px 5px;
   width: 200px;
   height: 125px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -373,14 +373,15 @@ body {
 }
 
 #containerPreparacao {
+    display: block;
+    justify-items: center;
     background-color: var(--cinza2);
-    padding: 10px;
+    padding-bottom: 10px;
     border-radius: 10px;
-    margin-top: 20px;
 }
 
 .barra-progresso {
-  background-color: var(--branco1);
+  background-color: var(--cinza1);
   border-radius: 10px;
   width: 480px;
   height: 24px;
@@ -425,7 +426,8 @@ body {
 #btnFinalizarPreparacao {
     width: 100px;
     height: 30px;
-    margin-top: 90px;
+    margin-top: 40px;
+    margin-left: 400px;
 }
 
 #btnFinalizarPreparacao:disabled {
@@ -441,7 +443,13 @@ body {
   line-height: 24px;
   transition: width 0.4s ease;
   font-weight: bold;
-  animation: pulseBlue 4.0s infinite;
+}
+
+.header-embalagem span {
+    margin-left: 45px;
+    background-color: var(--cinza2);
+    padding: 2px;
+    border-radius: 5px;
 }
 
 #progressoSeparados {
@@ -450,6 +458,7 @@ body {
 
 #progressoPreparados {
   background-color: var(--verde2);
+  animation: pulseGreen 2s infinite;
 }
 
 .aviso {
@@ -861,6 +870,12 @@ input[type="checkbox"] {
     align-items: center;
 }
 
+.flex-song {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
 .barcode {
     margin-top: 10px;
 }
@@ -1269,6 +1284,47 @@ button:hover {
     gap: 10px;
 }
 
+#btnStatusBlister[data-status="aberto"]:hover {
+  background-color: var(--vermelho2);
+  transition: 1s;
+  animation: pulseRed 2s infinite;
+}
+
+#btnStatusBlister[data-status="fechado"]:hover {
+  background-color: var(--verde2);
+  transition: 1s;
+  animation: pulseGreen 2s infinite;
+}
+
+.acoesBts {
+    display: flex;
+    gap: 5px;
+}
+
+.btnAcaoBts {
+    display: flex;
+    background: var(--cinza2);
+    width: 97px;
+    border-radius: 10px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.btnAcaoBts button {
+    box-shadow: 0px 0px 0px rgba(0, 0, 0, 0.3);
+}
+
+#btnExcluirEmb:hover {
+    background-color: var(--vermelho2);
+    transition: 1s;
+    animation: pulseRed 2s infinite;
+}
+
+#btnAtribuirSku:hover {
+    background-color: var(--verde2);
+    transition: 1s;
+    animation: pulseGreen 2s infinite;
+}
+
 #btnAdicionar{
     margin-top: 40px;
 }
@@ -1424,10 +1480,8 @@ tr {
     bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--cinza1);
     padding: 8px 16px;
     border-radius: 12px;
-    box-shadow: 0 0 10px var(--cinza1);
     z-index: 1000;
     display: flex;
     gap: 12px;
@@ -1438,7 +1492,7 @@ tr {
 .paginacao-container button {
     padding: 6px 12px;
     border-radius: 6px;
-    border: none;
+    border: var(--cinza1) solid 2px;
     background-color: var(--cinza3);
     cursor: pointer;
     font-weight: bold;
