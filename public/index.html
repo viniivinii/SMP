@@ -17,7 +17,7 @@
     <div id="botoesTopo">
       <button class="btnTopo" id="btnEstoque" onclick="mostrarTela('telaEstoque')">📦 Estoque</button>
       <button class="btnTopo" id="btnExpedicao" onclick="mostrarTela('telaExpedicao')">🚚 Expedição</button>      
-      <button class="btnTopo" id="btnHistorico" onclick="atualizarHistoricoDoBanco()">📁 Ver Histórico</button>
+      <button class="btnTopo" id="btnHistorico" onclick="atualizarHistoricoDoBanco()">📁 Histórico</button>
       <button class="btnTopo" id="btnNovoSKU"  onclick="mostrarTela('telaSkus')">🔍 Consultar SKU's</button>
     </div>
   </div>
@@ -198,7 +198,7 @@
   </div>
 
   <div id="telaHistorico" class="hidden">
-    <h3>📜 Histórico de Pedidos</h3>
+    <h1>📜 Histórico de Pedidos</h1>
     <div class="pesquisa-historico-container">
       <input type="text" id="pesquisaHistorico" placeholder="🔍 Pesquisar pedido..." oninput="carregarHistoricoPaginado()" />
     </div>
@@ -212,6 +212,7 @@
       <div id="listaDeSkus" style="margin-bottom: 20px"></div>
     </div>
     <div id="telaSkus" class="hidden">
+      <h1>🧩 Gerenciamento de SKU</h1>
       <div id="adicionarNovoSku">
         <h3>Adicionar Novo SKU</h3>
         <div class="form-novo-sku">

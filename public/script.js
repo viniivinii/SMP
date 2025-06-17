@@ -89,7 +89,7 @@ function mostrarTela(idTela) {
       carregarPedidosExpedicao();
       break;
     case "telaHistorico":
-      carregarHistoricoPaginado();
+      // carregarHistoricoPaginado();
       break;
     case "telaSkus":
       carregarSKUsDoBanco();
@@ -885,9 +885,13 @@ async function atualizarHistoricoDoBanco() {
     const data = await (await fetch(`${API_URL}/pedidosprep`)).json();
     const mapa = new Map();
     data.forEach(p => {
-      if (!mapa.has(p.id)) mapa.set(p.id, p);
+      const chave = String(p.pedido).trim().toLowerCase();
+      if (!mapa.has(chave) || p.id > mapa.get(chave).id) {
+        mapa.set(chave, p);
+      }
     });
     historicoPedidos = Array.from(mapa.values());
+    historicoPedidos.sort((a, b) => new Date(b.inicio) - new Date(a.inicio));
     mostrarHistorico();
   } catch (erro) {
     console.error("Erro ao atualizar histórico:", erro);
@@ -947,6 +951,7 @@ function continuarPedido(pedido, id, tipo) {
       document.getElementById("resumoPedido").innerText = `Pedido ${pedido}`;
 
       // Reexibe os SKUs antigos
+      consultarSkusSeparados();
       atualizarInterface();
     })
     .catch(err => {
@@ -1421,6 +1426,10 @@ async function carregarHistoricoPaginado() {
           <div><p>ID: ${pedido.id}</p></div>
           <div><p>Data de envio: ${pedido.inicio ? new Date(pedido.inicio).toLocaleDateString() : ""}</p></div>
           <div><p>Tipo: ${pedido.tipo}</p></div>
+          <div class="pedido-botoes">
+            <button onclick="gerarPDF(${pedido.id})" class="btn-imprimir">🖨️ Imprimir</button>
+            <button onclick="toggleSKUs(this)" class="btn-skus">Ver SKUs</button>
+          </div>
         </div>
         <div class="card-qtd">
           <div class="mini-card">
@@ -1442,10 +1451,6 @@ async function carregarHistoricoPaginado() {
             <div><p>${totalEmbalagens}</p></div>
           </div>
         </div>
-      </div>
-      <div class="pedido-botoes">
-        <button onclick="gerarPDF(${pedido.id})" class="btn-imprimir">🖨️ Imprimir</button>
-        <button onclick="toggleSKUs(this)" class="btn-skus">Ver SKUs</button>
       </div>
       <div class="skus-container hidden">
         ${skusHTML}
@@ -1506,12 +1511,22 @@ async function gerarPDF(pedidoId) {
     fetch(`${API_URL}/embalagens/${pedidoId}`).then((r) => r.json()),
   ]);
 
-  const totalItens = itens.reduce((s, i) => s + (i.qtd || 0), 0);
+  const mapaSkus = {};
+  itens.forEach((i) => {
+    if (mapaSkus[i.sku]) {
+      mapaSkus[i.sku].qtd += i.qtd;
+    } else {
+      mapaSkus[i.sku] = { ...i };
+    }
+  });
+  const itensConsolidados = Object.values(mapaSkus);
+
+  const totalItens = itensConsolidados.reduce((s, i) => s + (i.qtd || 0), 0);
   const totalEmbalagens = embalagens.length;
-  const totalMemorias = itens
+  const totalMemorias = itensConsolidados
     .filter((i) => i.hardware === "Memória RAM")
     .reduce((s, i) => s + (i.qtd || 0), 0);
-  const totalProcessadores = itens
+  const totalProcessadores = itensConsolidados
     .filter((i) => i.hardware === "Processador")
     .reduce((s, i) => s + (i.qtd || 0), 0);
 
@@ -1549,7 +1564,7 @@ async function gerarPDF(pedidoId) {
   const itemCardW = 180;
   const itemCardH = 20;
 
-  itens.forEach((item) => {
+  itensConsolidados.forEach((item) => {
     if (y + itemCardH > 280) {
       doc.addPage();
       y = 20;
