@@ -385,6 +385,47 @@ async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware) {
     mostrarAviso("❌ Falha ao distribuir SKU nos blisters", "#e74c3c");
   }
 }
+async function distribuirSkuParaCaixas(itemId, sku, qtd, hardware) {
+  try {
+    const resposta = await fetch(`${API_URL}/embalagens/${pedidoIdAtual}`);
+    const embalagens = await resposta.json();
+    const caixas = embalagens.filter(e => e.tipo === 'caixa' && e.status === 'aberto');
+
+    if (caixas.length === 0) {
+      return mostrarAviso("⚠️ Nenhuma caixa aberta disponível. Crie uma embalagem primeiro.", "#f39c12");
+    }
+
+    const distrib = await fetch(`${API_URL}/embalagens/distribuir`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pedido_id: pedidoIdAtual,
+        item_id: itemId,
+        sku,
+        qtd,
+        hardware
+      })
+    });
+
+    const resultado = await distrib.json();
+
+    if (distrib.status === 206) {
+      mostrarAviso(`⚠️ Parcialmente distribuído: ${resultado.warning}`, "#f39c12");
+    } else if (!distrib.ok) {
+      mostrarAviso(`❌ Erro: ${resultado.error}`, "#e74c3c");
+      return;
+    } else {
+      mostrarAviso("✅ SKU distribuído com sucesso!", "#2ecc71");
+    }
+
+    await carregarSkusSeparados();
+    await carregarEmbalagens(pedidoIdAtual);
+
+  } catch (err) {
+    console.error("Erro na distribuição:", err);
+    mostrarAviso("❌ Falha ao distribuir SKU nas caixas", "#e74c3c");
+  }
+}
 async function excluirEmbalagem(id) {
   try {
     await fetch(`${API_URL}/embalagens/${id}`, {
@@ -435,7 +476,7 @@ if (!filtradas || filtradas.length === 0) {
       div.className = `card-embalagem ${emb.status === "fechado" ? "fechado" : "aberto"}`;
 
       const ocup = emb.ocupado || 0;
-      const capacidade = 25;
+      const capacidade = emb.tipo === 'caixa' ? 100 : 25;
       const perc = Math.round((ocup / capacidade) * 100);
       const itens = skusPorEmbalagem[emb.id] || [];
       const listaOculta = itens.map(i => `<li>${i.sku} - ${i.qtd} un</li>`).join("") || "<li>Vazio</li>";
@@ -458,7 +499,7 @@ if (!filtradas || filtradas.length === 0) {
           </button>
           ${emb.status === "aberto" ? `
             <div class="btnAcaoBts">
-              <button id="btnAtribuirSku" onclick="abrirModalAddSku(${emb.id}, ${capacidade - ocup})">➕</button>
+              <button id="btnAtribuirSku" onclick="abrirModalAddSku(${emb.id}, '${emb.tipo}', ${capacidade - ocup})">➕</button>
               <button id="btnExcluirEmb" onclick="excluirEmbalagem(${emb.id})">🗑️</button>
             </div>
             ` : ""}
@@ -608,13 +649,21 @@ function filtrarEmbalagens() {
 }
 async function prepararItem(itemId, hardware, qtd, sku) {
   try {
-        if (hardware === "Memória RAM") {
+        if (hardware === "Memória RAM" || hardware === "Processador") {
       const res = await fetch(`${API_URL}/embalagens/${pedidoIdAtual}`);
       const emb = await res.json();
-      const abertos = emb.filter(e => e.tipo === 'blister' && e.status === 'aberto');
-      if (abertos.length === 0) {
-        mostrarAviso("⚠️ Abra um blister antes de preparar.", "#f39c12");
-        return;
+      if (hardware === "Memória RAM") {
+        const abertos = emb.filter(e => e.tipo === 'blister' && e.status === 'aberto');
+        if (abertos.length === 0) {
+          mostrarAviso("⚠️ Abra um blister antes de preparar.", "#f39c12");
+          return;
+        }
+      } else {
+        const abertos = emb.filter(e => e.tipo === 'caixa' && e.status === 'aberto');
+        if (abertos.length === 0) {
+          mostrarAviso("⚠️ Abra uma caixa antes de preparar.", "#f39c12");
+          return;
+        }
       }
     }
     const resposta = await fetch(`${API_URL}/itens-preparados/${itemId}`, {
@@ -632,6 +681,8 @@ async function prepararItem(itemId, hardware, qtd, sku) {
     // 🔥 Distribuir automaticamente
     if (hardware === "Memória RAM") {
      await distribuirSkuParaBlisters(itemId, skuFinal, qtd, hardware);
+    } else if (hardware === "Processador") {
+      await distribuirSkuParaCaixas(itemId, skuFinal, qtd, hardware);
     }
 
     // Recarrega interface
@@ -727,24 +778,30 @@ async function confirmarNovaEmbalagem() {
 
 let embalagemSelecionada = null;
 let espacoDisponivel = 0;
+let tipoEmbalagemSelecionada = null;
 
-function abrirModalAddSku(id, disponivel) {
+function abrirModalAddSku(id, tipo, disponivel) {
   embalagemSelecionada = id;
+  tipoEmbalagemSelecionada = tipo;
   espacoDisponivel = disponivel;
   const select = document.getElementById('selectAddSku');
   select.innerHTML = '';
   dadosSeparados.forEach(item => {
     if (item.qtd <= disponivel) {
-      const opt = document.createElement('option');
-      opt.value = item.id;
-      opt.textContent = `${item.sku} - ${item.qtd} un`;
-      select.appendChild(opt);
+      if ((tipo === 'blister' && item.hardware === 'Memória RAM') ||
+          (tipo === 'caixa' && item.hardware === 'Processador')) {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = `${item.sku} - ${item.qtd} un`;
+        select.appendChild(opt);
+      }
     }
   });
   document.getElementById('modalAddSku').classList.remove('hidden');
 }
 function fecharModalAddSku() {
   document.getElementById('modalAddSku').classList.add('hidden');
+  tipoEmbalagemSelecionada = null;
 }
 async function confirmarAddSku() {
   const select = document.getElementById('selectAddSku');

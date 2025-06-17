@@ -191,39 +191,38 @@ app.post("/embalagens/distribuir", async (req, res) => {
     return res.status(400).json({ error: "Faltam dados obrigatórios" });
   }
 
-  try {
-    const porBlister = dissipador ? 22 : 25;
+  const tipoEmb = hardware === "Processador" ? "caixa" : "blister";
+  const capacidadeMax = tipoEmb === "caixa" ? 100 : (dissipador ? 22 : 25);
 
-    // 1. Buscar blisters abertos
-    const [blisters] = await db.execute(`
+  try {
+    const [embalagens] = await db.execute(`
       SELECT e.id,
         COALESCE(SUM(ei.qtd), 0) AS ocupado
       FROM estoque.embalagens e
       LEFT JOIN estoque.embalagens_itens ei ON e.id = ei.embalagem_id
-      WHERE e.pedido_id = ? AND e.tipo = 'blister' AND e.status = 'aberto'
+      WHERE e.pedido_id = ? AND e.tipo = ? AND e.status = 'aberto'
       GROUP BY e.id
       ORDER BY e.id
-    `, [pedido_id]);
+    `, [pedido_id, tipoEmb]);
 
-    if (!blisters.length) {
-      return res.status(400).json({ error: "Nenhum blister aberto disponível" });
+    if (!embalagens.length) {
+      const msg = tipoEmb === "caixa" ? "Nenhuma caixa aberta disponível" : "Nenhum blister aberto disponível";
+      return res.status(400).json({ error: msg });
     }
 
     let restante = qtd;
-
     let distribuido = 0;
 
-    for (const blister of blisters) {
-      const capacidadeDisponivel = porBlister - blister.ocupado;
+    for (const emb of embalagens) {
+      const capacidadeDisponivel = capacidadeMax - emb.ocupado;
 
       if (capacidadeDisponivel <= 0) continue;
 
       const inserir = Math.min(restante, capacidadeDisponivel);
 
-// Verifica se já existe o SKU no blister
       const [exist] = await db.execute(
         `SELECT id, qtd FROM estoque.embalagens_itens WHERE embalagem_id = ? AND sku = ?`,
-        [blister.id, sku]
+        [emb.id, sku]
       );
 
       if (exist.length) {
@@ -235,27 +234,24 @@ app.post("/embalagens/distribuir", async (req, res) => {
         await db.execute(
           `INSERT INTO estoque.embalagens_itens (embalagem_id, sku, qtd)
            VALUES (?, ?, ?)`,
-          [blister.id, sku, inserir]
+          [emb.id, sku, inserir]
         );
       }
 
       restante -= inserir;
       distribuido += inserir;
 
-      // Fechar blister se atingir capacidade total
-      const novoOcupado = blister.ocupado + inserir;
-      if (novoOcupado >= porBlister) {
-        await db.execute(`
-          UPDATE estoque.embalagens
-          SET status = 'fechado'
-          WHERE id = ?
-        `, [blister.id]);
+      const novoOcupado = emb.ocupado + inserir;
+      if (novoOcupado >= capacidadeMax) {
+        await db.execute(
+          `UPDATE estoque.embalagens SET status = 'fechado' WHERE id = ?`,
+          [emb.id]
+        );
       }
 
       if (restante <= 0) break;
     }
 
-     // Atualiza o item separado conforme o que foi distribuído
     if (distribuido > 0 && item_id) {
       const [rows] = await db.execute(
         `SELECT * FROM estoque.itens_separados WHERE id = ?`,
@@ -264,12 +260,10 @@ app.post("/embalagens/distribuir", async (req, res) => {
       if (rows.length) {
         const item = rows[0];
         if (distribuido < item.qtd) {
-          // Atualiza quantidade restante no item original
           await db.execute(
             `UPDATE estoque.itens_separados SET qtd = ?, status = 'separado' WHERE id = ?`,
             [item.qtd - distribuido, item_id]
           );
-          // Cria novo registro marcado como preparado
           await db.execute(
             `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, status)
              VALUES (?, ?, ?, ?, ?, 'preparado')`,
@@ -284,32 +278,16 @@ app.post("/embalagens/distribuir", async (req, res) => {
       }
     }
 
-
-    // Caso ainda sobre, avisa
     if (restante > 0) {
-      return res.status(206).json({ warning: `Parcialmente distribuído. Faltaram ${restante} unidades. Crie mais blisters.` });
+      const aviso = tipoEmb === "caixa" ? "caixas" : "blisters";
+      return res.status(206).json({ warning: `Parcialmente distribuído. Faltaram ${restante} unidades. Crie mais ${aviso}.` });
     }
 
-    res.json({ success: true, distribuido});
+    res.json({ success: true, distribuido });
 
   } catch (err) {
-    console.error("Erro ao distribuir SKU em blisters:", err);
+    console.error("Erro ao distribuir SKU:", err);
     res.status(500).json({ error: "Erro interno na distribuição" });
-  }
-});
-
-//put
-app.put('/pedidos/:id/finalizar', async (req, res) => {
-  const { id } = req.params;
-  try {
-    await db.execute(
-      `UPDATE estoque.pedidos SET fim = NOW(), status = 'preparado' WHERE id = ?`,
-      [id]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Erro ao finalizar pedido:', err);
-    res.status(500).json({ error: 'Erro ao finalizar pedido' });
   }
 });
 app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
@@ -320,11 +298,18 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
   }
 
   try {
+    const [[info]] = await db.execute(
+      'SELECT tipo FROM estoque.embalagens WHERE id = ?',
+      [id]
+    );
+    if (!info) {
+      return res.status(404).json({ error: 'Embalagem não encontrada' });
+    }
     const [[ocup]] = await db.execute(
       'SELECT COALESCE(SUM(qtd),0) as ocupado FROM estoque.embalagens_itens WHERE embalagem_id = ?',
       [id]
     );
-    const capacidade = 25;
+    const capacidade = info.tipo === 'caixa' ? 100 : 25;
     const disponivel = capacidade - ocup.ocupado;
     const inserir = Math.min(qtd, disponivel);
 
@@ -356,6 +341,21 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
   } catch (err) {
     console.error('Erro ao adicionar SKU na embalagem:', err);
     res.status(500).json({ error: 'Erro ao adicionar SKU' });
+  }
+});
+
+//put
+app.put('/pedidos/:id/finalizar', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.execute(
+      `UPDATE estoque.pedidos SET fim = NOW(), status = 'preparado' WHERE id = ?`,
+      [id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao finalizar pedido:', err);
+    res.status(500).json({ error: 'Erro ao finalizar pedido' });
   }
 });
 app.put("/pedidos/:id/voltar", async (req, res) => {
