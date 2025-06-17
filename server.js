@@ -668,12 +668,36 @@ app.delete("/itens/:id", async (req, res) => {
 });
 app.delete("/pedidos/:id", async (req, res) => {
   const id = req.params.id;
+  
+  const conn = await db.getConnection();
   try {
-    await db.execute("DELETE FROM estoque.pedidos WHERE id = ?", [id]);
+    await conn.beginTransaction();
+
+    await conn.execute(
+      "DELETE FROM estoque.embalagens_itens WHERE embalagem_id IN (SELECT id FROM estoque.embalagens WHERE pedido_id = ?)",
+      [id]
+    );
+    await conn.execute(
+      "DELETE FROM estoque.embalagens WHERE pedido_id = ?",
+      [id]
+    );
+    await conn.execute(
+      "DELETE FROM estoque.itens_separados WHERE pedido_id = ?",
+      [id]
+    );
+    await conn.execute(
+      "DELETE FROM estoque.pedidos WHERE id = ?",
+      [id]
+    );
+
+    await conn.commit();
     res.sendStatus(200);
   } catch (err) {
+    await conn.rollback();
     console.error("Erro ao deletar pedido:", err);
     res.status(500).send("Erro ao cancelar pedido");
+    } finally {
+    conn.release();
   }
 });
 

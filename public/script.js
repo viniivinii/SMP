@@ -265,15 +265,13 @@ async function renderizarSkusPreparadosExpandido() {
         `<li>${e.tipo.toUpperCase()} #${e.embalagem_id} - ${e.qtd} un</li>`
       ).join("");
 
-      card.innerHTML = `
-        <div class="card-preparado">
+      card.innerHTML = `       
           <div class="card-preparado-topo">
           <strong>${sku}</strong>
           <span class="qtd">${totalQtd} un</span>
         </div>
         <button class="btn-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">➕ Ver embalagens</button>
-        <ul class="lista-embalagens hidden">${listaOculta}</ul>
-        </div>
+        <ul class="lista-embalagens hidden">${listaOculta}</ul>       
       `;
 
       container.appendChild(card);
@@ -1499,159 +1497,78 @@ function excluirPedido(pedido) {
 }
 async function gerarPDF(pedidoId) {
   const doc = new jsPDF();
-  const pedidoObj = historicoPedidos.find(p => p.id === pedidoId);
+
+  const pedidoObj = historicoPedidos.find((p) => p.id === pedidoId);
   if (!pedidoObj) return;
-    const [itens, emb] = await Promise.all([
-    fetch(`${API_URL}/itens/${pedidoId}`).then(r => r.json()),
-    fetch(`${API_URL}/sku-emblist/${pedidoId}`).then(r => r.json())
+
+  const [itens, embalagens] = await Promise.all([
+    fetch(`${API_URL}/itens/${pedidoId}`).then((r) => r.json()),
+    fetch(`${API_URL}/embalagens/${pedidoId}`).then((r) => r.json()),
   ]);
 
-  const mapaEmbs = {};
-  emb.forEach(e => {
-    if (!mapaEmbs[e.sku]) mapaEmbs[e.sku] = new Set();
-    mapaEmbs[e.sku].add(e.embalagem_id);
-  });
+  const totalItens = itens.reduce((s, i) => s + (i.qtd || 0), 0);
+  const totalEmbalagens = embalagens.length;
+  const totalMemorias = itens
+    .filter((i) => i.hardware === "Memória RAM")
+    .reduce((s, i) => s + (i.qtd || 0), 0);
+  const totalProcessadores = itens
+    .filter((i) => i.hardware === "Processador")
+    .reduce((s, i) => s + (i.qtd || 0), 0);
 
   // Cabeçalho
-  doc.setFillColor(50);
-  doc.rect(0, 0, 210, 20, "F");
-  doc.setTextColor(255);
-  doc.setFontSize(14);
-  doc.text(`Relatório do Pedido ${pedidoObj.pedido}`, 10, 13);
+  doc.setFontSize(16);
+  doc.setTextColor(225);
+  doc.rect(0, 0, 210, 25, "F");
+  doc.text(`Pedido ${pedidoObj.pedido}`, 105, 15, { align: "center" });
+  doc.setFontSize(10);
+  doc.text(`Gerado em: ${new Date().toLocaleString()}`, 105, 20, {
+    align: "center",
+  });
 
   let y = 30;
-  const cardWidth = 180;
-  const cardHeight = 35;
+  const cardW = 90;
+  const cardH = 15;
   const spacing = 10;
 
-  let totalItens = 0;
+  // Quantidades Totais
+  doc.setFillColor(230);
+  doc.roundedRect(15, y, cardW, cardH, 3, 3, "F");
+  doc.roundedRect(110, y, cardW, cardH, 3, 3, "F");
+  doc.setFontSize(11);
+  doc.setTextColor(0);
+  doc.text(`Memórias: ${totalMemorias}`, 115, y + 5);
+  doc.text(`Processadores: ${totalProcessadores}`, 115, y + 12);
+  doc.text(`Total Itens: ${totalItens}`, 20, y + 5);
+  doc.text(`Total Embalagens: ${totalEmbalagens}`, 20, y + 12);
 
-  // Cards individuais
+  y += cardH + spacing * 1.5;
+  doc.setFontSize(14);
+  doc.text("SKUs Separados", 105, y, { align: "center" });
+  y += 8;
+
+  const itemCardW = 180;
+  const itemCardH = 20;
+
   itens.forEach((item) => {
-    if (y + cardHeight > 270) {
+    if (y + itemCardH > 280) {
       doc.addPage();
       y = 20;
     }
 
     doc.setFillColor(245);
-    doc.roundedRect(15, y, cardWidth, cardHeight, 3, 3, "F");
-
-    doc.setFontSize(9);
+    doc.roundedRect(15, y, itemCardW, itemCardH, 3, 3, "F");
+    doc.setFontSize(10);
     doc.setTextColor(0);
 
     const modeloLines = doc.splitTextToSize(item.modelo, 90);
 
     doc.text(`SKU: ${item.sku}`, 18, y + 7);
-    doc.text(`Hardware: ${item.hardware}`, 18, y + 14);
-    doc.text(`Modelo:`, 18, y + 21);
-    doc.text(modeloLines, 38, y + 21);
+    doc.text(`Hardware: ${item.hardware}`, 90, y + 7);
+    doc.text(`Modelo:`, 18, y + 15);
+    doc.text(modeloLines, 38, y + 15);
+    doc.text(`Qtd.: ${item.qtd}`, 160, y + 7);
 
-    const isProc = item.hardware === "Processador";
-    const qtdTotal = item.qtd || 0;
-    const qtdBlisterOuCaixa = mapaEmbs[item.sku] ? mapaEmbs[item.sku].size : 0;
-    const label = isProc ? "Caixas" : "Blisters";
-
-    totalItens += qtdTotal;
-
-    doc.text(`${label}: ${qtdBlisterOuCaixa}`, 130, y + 14);
-    doc.text(`Qtd.: ${qtdTotal}`, 130, y + 21);
-
-    y += cardHeight + spacing;
-  });
-
-  // Total de itens
-  if (y + 20 > 270) {
-    doc.addPage();
-    y = 20;
-  }
-  doc.setFillColor(230);
-  doc.roundedRect(15, y, cardWidth, 20, 3, 3, "F");
-  doc.setTextColor(0);
-  doc.setFontSize(12);
-  doc.text(`Total de Itens do Pedido: ${totalItens}`, 20, y + 13);
-
-  // Página da planilha
-  doc.addPage();
-  doc.setFontSize(10);
-  doc.setTextColor(0);
-
-  // Cabeçalho da planilha
-  const startX = 10;
-  let rowY = 20;
-  const colWidths = [30, 30, 60, 40, 30];
-
-  doc.setFillColor(200);
-  doc.rect(startX, rowY, 190, 10, "F");
-  doc.setTextColor(0);
-  doc.text("SKU", startX + 2, rowY + 7);
-  doc.text("Hardware", startX + colWidths[0] + 2, rowY + 7);
-  doc.text("Modelo", startX + colWidths[0] + colWidths[1] + 2, rowY + 7);
-  doc.text(
-    "Blisters/Caixas",
-    startX + colWidths[0] + colWidths[1] + colWidths[2] + 2,
-    rowY + 7
-  );
-  doc.text(
-    "Qtd.",
-    startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 2,
-    rowY + 7
-  );
-
-  rowY += 10;
-
-  itens.forEach((item) => {
-    if (rowY + 10 > 280) return; // evita ultrapassar a página
-
-    const isProc = item.hardware === "Processador";
-    const qtd = item.qtd || 0;
-    const caixasOuBlisters = mapaEmbs[item.sku] ? mapaEmbs[item.sku].size : 0;
-    const modeloLines = doc.splitTextToSize(item.modelo, colWidths[2] - 4);
-
-    // Celulas da linha
-    doc.setDrawColor(150);
-    doc.setFillColor(255);
-
-    // Coluna SKU
-    doc.rect(startX, rowY, colWidths[0], 10, "S");
-    doc.text(item.sku, startX + 2, rowY + 7);
-
-    // Coluna Hardware
-    doc.rect(startX + colWidths[0], rowY, colWidths[1], 10, "S");
-    doc.text(item.hardware, startX + colWidths[0] + 2, rowY + 7);
-
-    // Coluna Modelo
-    doc.rect(startX + colWidths[0] + colWidths[1], rowY, colWidths[2], 10, "S");
-    doc.text(modeloLines, startX + colWidths[0] + colWidths[1] + 2, rowY + 4);
-
-    // Coluna Blisters/Caixas
-    doc.rect(
-      startX + colWidths[0] + colWidths[1] + colWidths[2],
-      rowY,
-      colWidths[3],
-      10,
-      "S"
-    );
-    doc.text(
-      `${isProc ? "Caixas" : "Blisters"}: ${caixasOuBlisters}`,
-      startX + colWidths[0] + colWidths[1] + colWidths[2] + 2,
-      rowY + 7
-    );
-
-    // Coluna Qtd
-    doc.rect(
-      startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3],
-      rowY,
-      colWidths[4],
-      10,
-      "S"
-    );
-    doc.text(
-      `${qtd}`,
-      startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 2,
-      rowY + 7
-    );
-
-    rowY += 10;
+    y += itemCardH + 5;
   });
 
   doc.save(`pedido_${pedidoObj.pedido}.pdf`);
