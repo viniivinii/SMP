@@ -280,7 +280,7 @@ async function renderizarSkusPreparadosExpandido() {
           <strong>${sku}</strong>
           <span class="qtd">${totalQtd} un</span>
         </div>
-        <button class="btn-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">➕ Ver embalagens</button>
+        <button class="btn-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">Ver embalagens</button>
         <ul class="lista-embalagens hidden">${listaOculta}</ul>       
       `;
 
@@ -348,7 +348,7 @@ async function atualizarResumoPreparacao() {
     console.error("Erro ao atualizar resumo:", error);
   }
 }
-async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware) {
+async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware, dissipador) {
   try {
     // Checar se há embalagens do tipo blister abertas
     const resposta = await fetch(`${API_URL}/embalagens/${pedidoIdAtual}`);
@@ -358,8 +358,6 @@ async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware) {
     if (blistersAbertos.length === 0) {
       return mostrarAviso("⚠️ Nenhum blister aberto disponível. Crie uma embalagem primeiro.", "#f39c12");
     }
-
-    const dissipador = skuPossuiDissipador(sku);
 
     // Enviar requisição para o backend
     const distrib = await fetch(`${API_URL}/embalagens/distribuir`, {
@@ -562,7 +560,7 @@ function renderizarSeparadosPaginado() {
     pagina.forEach(item => {
       const card = document.createElement("div");
       card.className = "card-preparacao";
-      const dissipador = skuPossuiDissipador(item.sku);
+      const dissipador = Boolean(item.dissipador);
       if (item.hardware === "Processador") {
         card.classList.add("processador");
       } else if (dissipador) {
@@ -580,7 +578,7 @@ function renderizarSeparadosPaginado() {
         <div class="card-body">
           <em>${item.modelo || 'Modelo não cadastrado'}</em>
         </div>
-        <button class="btn-preparar" onclick="prepararItem(${item.id}, '${item.hardware}', ${item.qtd}, '${item.sku}')">Adicionar</button>
+        <button class="btn-preparar" onclick="prepararItem(${item.id}, '${item.hardware}', ${item.qtd}, '${item.sku}', ${item.dissipador})">Adicionar</button>
       `;
       area.appendChild(card);
     });
@@ -667,7 +665,7 @@ function filtrarEmbalagens() {
   paginaEmbalagens = 1;
   renderizarEmbalagensPaginado();
 }
-async function prepararItem(itemId, hardware, qtd, sku) {
+async function prepararItem(itemId, hardware, qtd, sku, dissipador) {
   try {
         if (hardware === "Memória RAM" || hardware === "Processador") {
       const res = await fetch(`${API_URL}/embalagens/${pedidoIdAtual}`);
@@ -700,7 +698,7 @@ async function prepararItem(itemId, hardware, qtd, sku) {
 
     // 🔥 Distribuir automaticamente
     if (hardware === "Memória RAM") {
-     await distribuirSkuParaBlisters(itemId, skuFinal, qtd, hardware);
+     await distribuirSkuParaBlisters(itemId, skuFinal, qtd, hardware, dissipador);
     } else if (hardware === "Processador") {
       await distribuirSkuParaCaixas(itemId, skuFinal, qtd, hardware);
     }
@@ -841,7 +839,7 @@ async function confirmarAddSku() {
       item_id: item.id,
       sku: item.sku,
       qtd: item.qtd,
-      dissipador: skuPossuiDissipador(item.sku)
+      dissipador: item.dissipador
     })
   });
   fecharModalAddSku();

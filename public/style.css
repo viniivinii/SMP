@@ -372,11 +372,11 @@ body {
 }
 
 .card-preparacao.memoria-sem-dissipador {
-  border-left-color: var(--verde3);
+  border-left-color: var(--amarelo2);
 }
 
 .card-preparacao.memoria-com-dissipador {
-  border-left-color: var(--cinza1);
+  border-left-color: var(--branco2);
 }
 
 .lotacao {
