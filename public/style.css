@@ -1,8 +1,11 @@
 :root {
-    --cinza1: #BABDBF;
-    --cinza2: #808488;
-    --cinza3: #666A6D;
-    --cinza4: #4D5052;
+    --cinza1: #A3A3A3;
+    --cinza2: #8F8F8F;
+    --cinza3: #727272;
+    --cinza4: #626262;
+    --cinza5: #434343;
+    --cinza6: #333333;
+    --cinza7: #292929;
     --verde2: #34d399;
     --verde2: #22c55e;
     --verde3: #4ade80;
@@ -93,6 +96,8 @@ body {
     animation: fadeIn 0.6s ease-in-out;
 }
 
+/* Tela pedidos */
+
 #iniciarPedido {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -102,6 +107,145 @@ body {
     display: flex;
     align-items: center;
     justify-content: end;
+}
+
+#pedidoInput {
+    border: var(--cinza1) solid 2px;
+}
+
+.modal {
+  position: fixed;
+  z-index: 999;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  display: flex; justify-content: center; align-items: center;
+}
+
+.modal-content {
+  background: var(--branco1);
+  padding: 20px;
+  border-radius: 10px;
+  width: 300px;
+  text-align: center;
+}
+
+.modal-content label {
+  display: block;
+  margin-top: 10px;
+}
+
+.modal-content input,
+.modal-content select {
+  width: 100%;
+  margin-top: 5px;
+  padding: 5px;
+}
+
+.modal-buttons {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.tipo-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.tipo-buttons button {
+  padding: 10px 15px;
+  margin: 0 5px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: var(--cinza1);
+  color: black;
+  font-weight: bold;
+}
+
+.tipo-buttons button.ativo {
+  background-color: var(--azul1);
+  color: var(--branco1);
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--preto1);
+    padding: 2rem;
+    border-radius: 12px;
+    width: 300px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border: var(--branco2) solid 2px;
+    animation: pulseWhite 4s infinite;
+}
+
+.tipo-buttons button {
+    margin: 5px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    background: var(--cinza3);
+    cursor: pointer;
+    font-weight: bold;
+    border: var(--cinza1) solid 2px;
+}
+
+.tipo-buttons button.selecionado {
+    background: var(--azul2);
+    color: var(--branco2);
+    border: var(--azul3) solid 3px;
+}
+
+#confirmarPedido {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: var(--verde2);
+    color: var(--branco1);
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    animation: pulseGreen 2s infinite;
+}
+
+#cancelarPedido {
+    background-color: var(--vermelho3);
+    margin-left: 5px;
+}
+
+#confirmarPedido:disabled {
+    background: var(--cinza1);
+    cursor: not-allowed;
+}
+
+.cards-pedidos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.card-pedido {
+    background: var(--cinza4);
+    border: 1px solid var(--cinza1);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s;
+    animation: pulseWhite 4s infinite;
+    width: calc(33.333% - 10px);
+    box-sizing: border-box;
+    min-height: 200px;
+}
+
+.card-pedido:hover {
+    transform: scale(1.02);
 }
 
 .grid-preparacao {
@@ -295,64 +439,6 @@ body {
     background-color: var(--verde2);
 }
 
-.modal {
-  position: fixed;
-  z-index: 999;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0,0,0,0.5);
-  display: flex; justify-content: center; align-items: center;
-}
-
-.modal-content {
-  background: var(--branco1);
-  padding: 20px;
-  border-radius: 10px;
-  width: 300px;
-  text-align: center;
-}
-
-.modal-content label {
-  display: block;
-  margin-top: 10px;
-}
-
-.modal-content input,
-.modal-content select {
-  width: 100%;
-  margin-top: 5px;
-  padding: 5px;
-}
-
-.modal-buttons {
-  margin-top: 15px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.tipo-buttons {
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-}
-
-.tipo-buttons button {
-  padding: 10px 15px;
-  margin: 0 5px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  background-color: var(--cinza1);
-  color: black;
-  font-weight: bold;
-}
-
-.tipo-buttons button.ativo {
-  background-color: var(--azul1);
-  color: var(--branco1);
-}
-
-
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -368,14 +454,13 @@ body {
   font-size: 0.8em;
 }
 .barra-progresso-container {
-  margin: 20px 0;
+    margin-top: 10px;
 }
 
 #containerPreparacao {
     display: block;
     justify-items: center;
     background-color: var(--cinza2);
-    padding-bottom: 10px;
     border-radius: 10px;
 }
 
@@ -386,6 +471,7 @@ body {
   height: 24px;
   margin-bottom: 10px;
   overflow: hidden;
+  border: var(--cinza3) 2px solid;
 }
 
 .cardsResumo {
@@ -399,6 +485,7 @@ body {
     background-color: var(--preto1);
     padding: 10px;
     border-radius: 10px;
+    margin-top: 10px;
 }
 
 #btnNovoBlister {
@@ -499,7 +586,7 @@ body {
   margin-right: 10px;
 }
 
-#pedidosRecentes {
+#pedidosRecentes, #listaPedidosExpedicao {
     background-color: var(--preto1);
     margin-top: 10px;
     padding: 15px;
@@ -548,87 +635,6 @@ body {
     z-index: 999;
 }
 
-.modal.hidden {
-    display: none;
-}
-
-.modal-content {
-    background: var(--preto1);
-    padding: 2rem;
-    border-radius: 12px;
-    width: 300px;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    border: var(--branco2) solid 2px;
-    animation: pulseWhite 4s infinite;
-}
-
-.tipo-buttons button {
-    margin: 5px;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 8px;
-    background: var(--cinza3);
-    cursor: pointer;
-    font-weight: bold;
-    border: var(--cinza1) solid 2px;
-}
-
-.tipo-buttons button.selecionado {
-    background: var(--azul2);
-    color: var(--branco2);
-    border: var(--azul3) solid 3px;
-}
-
-#pedidoInput {
-    border: var(--cinza1) solid 2px;
-}
-
-#confirmarPedido {
-    margin-top: 15px;
-    padding: 10px 20px;
-    background: var(--verde2);
-    color: var(--branco1);
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    animation: pulseGreen 2s infinite;
-}
-
-#cancelarPedido {
-    background-color: var(--vermelho3);
-    margin-left: 5px;
-}
-
-#confirmarPedido:disabled {
-    background: var(--cinza1);
-    cursor: not-allowed;
-}
-
-.cards-pedidos {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.card-pedido {
-    background: var(--cinza3);
-    border: 1px solid var(--branco1);
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s;
-    animation: pulse 4s infinite;
-    width: calc(33.333% - 10px);
-    box-sizing: border-box;
-    min-height: 200px;
-}
-
-.card-pedido:hover {
-    transform: scale(1.02);
-}
 /* Estilos para a tela de preparação */
 .lista-cards-preparacao {
   display: flex;
@@ -706,7 +712,10 @@ body {
 .card-pedido .continuar {
     background: var(--verde2);
     color: var(--branco1);
-    animation: pulseGreen 4s infinite;
+}
+
+.card-pedido .continuar:hover {
+    animation: pulseGreen 2s infinite;
 }
 
 .card-pedido .cancelar {
@@ -715,10 +724,14 @@ body {
     margin-left: 10px;
 }
 
+.card-pedido .cancelar:hover {
+    animation: pulseRed 2s infinite;
+}
+
 .card-expedicao {
-  border: 1px solid var(--branco1);
+  border: 1px solid var(--cinza1);
   border-radius: 10px;
-  background: var(--cinza3);
+  background: var(--cinza4);
   padding: 15px;
   margin: 10px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -743,6 +756,11 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+
+.card-sku.pendente {
+  border: 2px solid var(--amarelo2);
+  animation: pulseYellow 1s infinite;
 }
 
 .card-sku-topo {
@@ -851,6 +869,11 @@ input[type="checkbox"] {
     border-radius: 8px;
     border: var(--cinza1) solid 2px;
     box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.skus-container {
+    display: grid;
+    grid: 1fr 1fr 1fr;
 }
 
 .pedido-container {
@@ -982,6 +1005,10 @@ input[type="checkbox"] {
     user-select: none;
 }
 
+.pedido-titulo h4 {
+    margin: 5px;
+}
+
 .resumo-titulo {
     font-size: 22px;
     margin-bottom: 10px;
@@ -1076,15 +1103,95 @@ input[type="checkbox"] {
     gap: 10px;
 }
 
-.card-info,
+.pedido-botoes {
+    display: flex;
+    gap: 10px;
+    background-color: var(--cinza3);
+    justify-content: center;
+    padding: 10px;
+    border-radius: 0px 0px 10px 10px;
+}
+
+.card-info {
+    background: var(--cinza2);
+    border-radius: 8px;
+}
+
+.card-info div {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.mini-card h4 {
+    margin: 1px;
+    color: var(--branco1);
+    align-items: center;
+}
+
+.mini-card div {
+    border: var(--cinza1) solid 2px;
+    border-radius: 10px;
+    margin-top: 5px;
+    background-color: var(--cinza2);
+    color: var(--branco1);
+}
+
+.mini-card p {
+    margin-left: 5px;
+    color: var(--branco1);
+}
+
+.sku-historico {
+    background: var(--cinza3);
+    color: var(--branco1);
+    padding: 5px 10px 0px 10px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: var(--cinza1) solid 2px;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+}
+.sku-historico button {
+    display: flex;
+    justify-content: center;
+}
+
+.sku-htopo {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  border: var(--cinza1) solid 2px;
+  padding-left: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border-radius: 10px;
+}
+.sku-hinfo {
+  font-size: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sku-hinfo div {
+    display: flex;
+    justify-content: center;
+}
+
+.btn-imprimir:hover {
+    background-color: var(--azul1);
+    animation: pulseBlue 2s infinite;
+}
+.btn-skus:hover {
+    background-color: var(--azul1);
+    animation: pulseBlue 2s infinite;
+}
+
 .card-qtd {
     background: var(--cinza2);
     padding: 10px;
     border-radius: 8px;
     flex: 1;
-}
-
-.card-qtd {
     display: flex;
     gap: 10px;
 }
@@ -1096,13 +1203,6 @@ input[type="checkbox"] {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-}
-
-.pedido-botoes {
-    margin-top: 10px;
-    display: flex;
-    gap: 10px;
 }
 
 .sku-card {
@@ -1122,6 +1222,9 @@ input[type="checkbox"] {
 
 .skus-container {
     margin-top: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 10px;
 }
 
 .toggle-skus-btn {
@@ -1175,7 +1278,10 @@ input[type="checkbox"] {
 #resumoPedido {
     padding-bottom: 20px;
 }
-
+#resumoPedido h4 {
+    font-size: 20px;
+    margin: 5px 5px;
+}
 /* Estilo para os botões*/
 
 button {

@@ -237,6 +237,12 @@ app.post("/embalagens/distribuir", async (req, res) => {
           [emb.id, sku, inserir]
         );
       }
+      if (tipoEmb === 'blister' && dissipador) {
+        await db.execute(
+          `UPDATE estoque.embalagens SET capacidade = 22 WHERE id = ?`,
+          [emb.id]
+        );
+      }
 
       restante -= inserir;
       distribuido += inserir;
@@ -292,7 +298,7 @@ app.post("/embalagens/distribuir", async (req, res) => {
 });
 app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
   const { id } = req.params;
-  const { item_id, sku, qtd } = req.body;
+  const { item_id, sku, qtd, dissipador } = req.body;
   if (!item_id || !sku || !qtd) {
     return res.status(400).json({ error: 'Dados obrigatórios ausentes' });
   }
@@ -309,7 +315,7 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
       'SELECT COALESCE(SUM(qtd),0) as ocupado FROM estoque.embalagens_itens WHERE embalagem_id = ?',
       [id]
     );
-    const capacidade = info.tipo === 'caixa' ? 100 : 25;
+    const capacidade = info.tipo === 'caixa' ? 100 : (dissipador ? 22 : 25);
     const disponivel = capacidade - ocup.ocupado;
     const inserir = Math.min(qtd, disponivel);
 
@@ -321,6 +327,9 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
       await db.execute('UPDATE estoque.embalagens_itens SET qtd = ? WHERE id = ?', [exist[0].qtd + inserir, exist[0].id]);
     } else {
       await db.execute('INSERT INTO estoque.embalagens_itens (embalagem_id, sku, qtd) VALUES (?, ?, ?)', [id, sku, inserir]);
+    }
+    if (info.tipo === 'blister' && dissipador) {
+      await db.execute('UPDATE estoque.embalagens SET capacidade = 22 WHERE id = ?', [id]);
     }
 
     const [[item]] = await db.execute('SELECT * FROM estoque.itens_separados WHERE id = ?', [item_id]);

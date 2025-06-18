@@ -43,6 +43,17 @@ let paginaEmbalagens = 1;
 const itensPorPaginaPreparacao = 4;
 
 let indiceExcluir = null;
+
+function skuPossuiDissipador(codigo) {
+  const info = skuData.find(
+    (s) => s.SKU.toUpperCase() === codigo.toUpperCase()
+  );
+  if (!info) return false;
+  return (
+    info.temDissipador === true ||
+    (info.modelo && info.modelo.toLowerCase().includes("dissipador"))
+  );
+}
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btnConfirmarExcluir');
   if (btn) btn.addEventListener('click', confirmarExcluirSku);
@@ -349,7 +360,7 @@ async function distribuirSkuParaBlisters(itemId, sku, qtd, hardware) {
       return mostrarAviso("⚠️ Nenhum blister aberto disponível. Crie uma embalagem primeiro.", "#f39c12");
     }
 
-    const dissipador = document.getElementById("dissipador")?.checked || false;
+    const dissipador = skuPossuiDissipador(sku);
 
     // Enviar requisição para o backend
     const distrib = await fetch(`${API_URL}/embalagens/distribuir`, {
@@ -811,7 +822,12 @@ async function confirmarAddSku() {
   await fetch(`${API_URL}/embalagens/${embalagemSelecionada}/adicionar-sku`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ item_id: item.id, sku: item.sku, qtd: item.qtd })
+    body: JSON.stringify({
+      item_id: item.id,
+      sku: item.sku,
+      qtd: item.qtd,
+      dissipador: skuPossuiDissipador(item.sku)
+    })
   });
   fecharModalAddSku();
   await carregarSkusSeparados();
@@ -890,6 +906,7 @@ function iniciarPreparacao(id, numeroPedido) {
   mostrarTela("telaPreparacao");
   carregarSkusSeparados(); // <-- Corrigido aqui
   carregarEmbalagens(pedidoIdAtual);
+  renderizarPreparadosPaginado();
 }
 function adicionarAoBlister(itemId, hardware, qtd, pedidoId) {
   if (hardware === "Processador") {
@@ -1010,6 +1027,7 @@ function continuarPedido(pedido, id, tipo) {
       // Reexibe os SKUs antigos
       consultarSkusSeparados();
       atualizarInterface();
+      carregarSKUsDoBanco();
     })
     .catch(err => {
       console.error("Erro ao continuar pedido:", err);
@@ -1059,6 +1077,8 @@ function confirmarNovoPedido() {
       // Mostrar tela de adicionar SKUs
       mostrarTela('telaPedido');
       document.getElementById("resumoPedido").innerText = `Pedido ${pedido}`;
+      atualizarInterface();
+      carregarSKUsDoBanco();
 
       mostrarAviso(`✅ Pedido ${pedido} criado com sucesso.`, "#2ecc71");
     })
@@ -1077,6 +1097,7 @@ function cancelarPedido(id) {
       if (!res.ok) throw new Error("Erro ao cancelar");
       carregarPedidosEstoque(); // atualiza lista
       mostrarAviso("Pedido cancelado com sucesso.", "#e67e22");
+      atualizarInterface();
     })
     .catch((err) => {
       console.error(err);
@@ -1251,15 +1272,15 @@ function atualizarInterface() {
         <h3 class="resumo-titulo">Pedido ${pedidoAtual} ID: ${pedidoIdAtual}</h3>
         <div class="resumo-estoque">
             <div class="resumo-memoria">
-              <strong>Memórias:</strong> ${totalMemorias}<br>
+              <h4>Memórias: ${totalMemorias}</h4>
             </div>
             <div class="resumo-processador">
-              <strong>Processadores:</strong> ${totalProcessadores}<br>
+              <h4>Processadores: ${totalProcessadores}</h4>
             </div>
         </div>
         <div class="resumo-itens-wrapper">
             <div class="resumo-itens">
-              <strong>Total de Itens:</strong> ${totalItens}
+              <h4>Total de Itens: ${totalItens}</h4>
             </div>
         </div>
       `;
@@ -1280,6 +1301,8 @@ function consultarSkusSeparados() {
       const area = document.getElementById("listaSkusSeparados");
       area.innerHTML = "";
 
+      let bloqueado = false;
+
       if (itens.length === 0) {
         area.innerHTML = "<p>Nenhum SKU separado ainda.</p>";
         return;
@@ -1288,6 +1311,10 @@ function consultarSkusSeparados() {
       itens.forEach((item) => {
         const div = document.createElement("div");
 div.className = "card-sku"; // novo nome da classe para evitar conflito
+if (item.hardware === "Não preenchido") {
+          div.classList.add("pendente");
+          bloqueado = true;
+        }
 
 // Define o ícone com base no hardware
 const icone = item.hardware === "Processador" ? "cpu.png" : "ram.png";
@@ -1308,6 +1335,8 @@ div.innerHTML = `
 area.appendChild(div);
 
       });
+      
+      document.getElementById("btnFinalizar").disabled = bloqueado;
     })
     .catch(err => {
       console.error("Erro ao buscar SKUs:", err);
@@ -1315,8 +1344,6 @@ area.appendChild(div);
     });
 }
 function removerSku(id) {
-  if (!confirm("Tem certeza que deseja remover este SKU?")) return;
-
   fetch(`${API_URL}/itens/${id}`, {
     method: "DELETE"
   })
@@ -1337,6 +1364,10 @@ function removerSKU(index) {
   atualizarInterface();
 }
 async function enviarPedido() {
+  if (document.getElementById("btnFinalizar").disabled) {
+    mostrarAviso("❌ Cadastre o SKU antes de enviar o pedido.", "#f39c12");
+    return;
+  }
   try {
     const itens = await fetch(`${API_URL}/itens/${pedidoIdAtual}`).then(r => r.json());
 
@@ -1452,26 +1483,42 @@ async function carregarHistoricoPaginado() {
 
     const skusMap = {};
     skusDados.forEach(({ sku, qtd, embalagem_id, tipo }) => {
-      if (!skusMap[sku]) skusMap[sku] = { qtd: 0, bls: [] };
+       if (!skusMap[sku]) {
+        const infoItem = itens.find(i => i.sku === sku);
+        skusMap[sku] = {
+          qtd: 0,
+          bls: [],
+          hardware: infoItem ? infoItem.hardware : "Não preenchido"
+        };
+      }
       skusMap[sku].qtd += qtd;
-      if (tipo === "blister") skusMap[sku].bls.push({ id: embalagem_id, qtd });
+      skusMap[sku].bls.push({ id: embalagem_id, qtd, tipo });
     });
 
          const skusHTML = Object.entries(skusMap)
-      .map(([sku, info]) => `
-        <div class="sku-card">
-          <div><strong>${sku}</strong></div>
-          <div><p>Quantidade: ${info.qtd}</p></div>
-          <div>
-            <select>
-              <option disabled selected>Ver embalagens</option>
-              ${info.bls
-                .map(b => `<option>Blister #${b.id} - Qtd: ${b.qtd}</option>`)
-                .join("")}
-            </select>
+      .map(([sku, info]) => {
+        const icone =
+          info.hardware === "Processador" ? "cpu.png" : "ram.png";
+        const listaOculta =
+          info.bls
+            .map(
+              (b) =>
+                `<li>${b.tipo === "caixa" ? "C" : "B"}${String(b.id).padStart(3, "0")} - ${b.qtd} un</li>`
+            )
+            .join("") || "<li>Não alocado</li>";
+        return `
+        <div class="sku-historico">
+          <div class="sku-htopo">
+            <img src="icon/${icone}" class="icone-hardware" alt="Icone ${info.hardware}">
+            <span class="hardware-nome">${info.hardware}</span>
           </div>
-        </div>
-      `)
+        <div class="sku-hinfo">
+              <div><strong>${sku} - Qtd: ${info.qtd}</strong></div>
+          </div>
+          <button class="btn-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">Ver embalagens</button>
+          <ul class="lista-embalagens hidden">${listaOculta}</ul>
+        </div>`;
+      })
       .join("");
 
     pedidoDiv.innerHTML = `
@@ -1490,22 +1537,29 @@ async function carregarHistoricoPaginado() {
         </div>
         <div class="card-qtd">
           <div class="mini-card">
-            <div><p>Qtd Memórias</p></div>
-            <div><p>${qtdMemorias}</p></div>
-            <div><p>Qtd Blisters</p></div>
-            <div><p>${qtdBlisters}</p></div>
+          <h4>Qtd. Hardware</h4>
+            <div>
+              <p>Memórias: ${qtdMemorias}</p>
+            </div>
+            <div>
+              <p>Blisters: ${qtdBlisters}</p>
+            </div>
           </div>
           <div class="mini-card">
-            <div><p>Qtd Processadores</p></div>
-            <div><p>${qtdProcessadores}</p></div>
-            <div><p>Qtd Caixas</p></div>
-            <div><p>${qtdCaixas}</p></div>
+          <h4>Qtd. Embalagens</h4>
+            <div>
+              <p>Processadores: ${qtdProcessadores}</p>
+            </div>
+            <div>
+            <p>Caixas: ${qtdCaixas}</p>
+            </div>
           </div>
           <div class="mini-card">
-            <div><p>Total de Itens</p></div>
-            <div><p>${totalItens}</p></div>
-            <div><p>Total de Embalagens</p></div>
-            <div><p>${totalEmbalagens}</p></div>
+          <h4>Qtd. Gerais</h4>
+            <div>
+            <p>Itens: ${totalItens}</p>
+            </div>
+            <div><p>Embalagens: ${totalEmbalagens}</p></div>
           </div>
         </div>
       </div>
@@ -1589,8 +1643,8 @@ async function gerarPDF(pedidoId) {
 
   // Cabeçalho
   doc.setFontSize(16);
-  doc.setTextColor(225);
-  doc.rect(0, 0, 210, 25, "F");
+  doc.setFillColor(130);
+  doc.roundedRect(0, 0, 210, 25, 6, 6, "F");
   doc.text(`Pedido ${pedidoObj.pedido}`, 105, 15, { align: "center" });
   doc.setFontSize(10);
   doc.text(`Gerado em: ${new Date().toLocaleString()}`, 105, 20, {
@@ -1627,7 +1681,7 @@ async function gerarPDF(pedidoId) {
       y = 20;
     }
 
-    doc.setFillColor(245);
+    doc.setFillColor(230);
     doc.roundedRect(15, y, itemCardW, itemCardH, 3, 3, "F");
     doc.setFontSize(10);
     doc.setTextColor(0);
@@ -1910,7 +1964,7 @@ async function confirmarExcluirSku() {
   const sku = listaFiltradaSkus[indiceExcluir];
   try {
     const response = await fetch(
-      `/api/excluir-sku/${encodeURIComponent(sku.SKU)}`,
+      `${API_URL}/api/excluir-sku/${encodeURIComponent(sku.SKU)}`,
       {
         method: "DELETE",
         headers: {
