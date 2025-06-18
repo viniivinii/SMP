@@ -358,13 +358,25 @@ body {
 
 .card-preparacao {
   background: var(--cinza3);
-  border-left: 4px solid var(--amarelo2);
+  border-left: 4px solid transparent;
   margin-bottom: 5px;
   border-radius: 8px;
   padding: 10px 5px;
   width: 200px;
   height: 125px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.card-preparacao.processador {
+  border-left-color: var(--verde2);
+}
+
+.card-preparacao.memoria-sem-dissipador {
+  border-left-color: var(--verde3);
+}
+
+.card-preparacao.memoria-com-dissipador {
+  border-left-color: var(--cinza1);
 }
 
 .lotacao {
@@ -426,22 +438,22 @@ body {
     background: var(--verde2);
     color: var(--branco1);
     margin-top: 7px;
+    margin-left: 7px;
     width: 180px;
     align-content: center;
     color: var(--branco1);
     border-radius: 10px;
     cursor: pointer;
     transition: background 0.3s ease;
-    animation: pulseGreen 4s infinite;
 }
 
 .btn-preparar:hover {
     background-color: var(--verde2);
+    animation: pulseGreen 4s infinite;
 }
 
 .card-header {
     display: flex;
-    align-items: center;
     gap: 6px;
 }
 .card-header .qtd {
@@ -451,13 +463,23 @@ body {
     margin-right: 4px;
 }
 
+#skuTitulo {
+    margin-top: 5px;
+}
+
+#iconeSeparado {
+  background: var(--cinza2);
+  border: var(--cinza1) solid 2px;
+  padding: 2px;
+  border-radius: 6px;
+}
+
 .qtd {
   background: var(--cinza2);
   border: var(--cinza1) solid 2px;
   color: var(--branco1);
   padding: 2px 8px;
-  margin-bottom: 5px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 0.8em;
 }
 .barra-progresso-container {
@@ -1293,7 +1315,7 @@ input[type="checkbox"] {
 
 button {
     padding: 10px 15px;
-    background-color: #808080;
+    background-color: var(--cinza2);
     color: #ebebeb;
     border: none;
     border-radius: 6px;

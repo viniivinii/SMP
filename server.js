@@ -150,7 +150,7 @@ app.post('/embalagens', async (req, res) => {
   const { pedido_id, tipo, capacidade } = req.body;
 
   try {
-    const cap = capacidade || (tipo === 'caixa' ? 100 : 25);
+    const cap = tipo === 'caixa' ? (capacidade || 100) : 0;
     const [result] = await db.execute(
       `INSERT INTO embalagens (pedido_id, tipo, status, capacidade)
        VALUES (?, ?, 'aberto', ?)`,
@@ -187,7 +187,7 @@ app.post("/embalagens/distribuir", async (req, res) => {
        WHERE e.pedido_id = ? AND e.tipo = ? AND e.status = 'aberto'`;
     const params = [pedido_id, tipoEmb];
     if (tipoEmb === 'blister') {
-      query += ' AND e.capacidade = ?';
+      query += ' AND (e.capacidade = ? OR e.capacidade = 0)';
       params.push(capacidadeNecessaria);
     }
     query += ' GROUP BY e.id ORDER BY e.id';
@@ -205,7 +205,14 @@ app.post("/embalagens/distribuir", async (req, res) => {
     let distribuido = 0;
 
     for (const emb of embalagens) {
-      const capacidadeMax = emb.tipo === 'caixa' ? 100 : (emb.capacidade || capacidadeNecessaria);
+      let capacidadeMax = emb.tipo === 'caixa' ? 100 : (emb.capacidade || capacidadeNecessaria);
+      if (emb.tipo === 'blister' && emb.capacidade === 0) {
+        await db.execute(
+          'UPDATE estoque.embalagens SET capacidade = ? WHERE id = ?',
+          [capacidadeNecessaria, emb.id]
+        );
+        capacidadeMax = capacidadeNecessaria;
+      }
       const capacidadeDisponivel = capacidadeMax - emb.ocupado;
 
       if (capacidadeDisponivel <= 0) continue;
@@ -302,15 +309,24 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
       [id]
     );
      if (info.tipo === 'blister') {
-      if (dissipador && info.capacidade != 22) {
-        return res.status(400).json({ error: 'Blister não suporta dissipador' });
-      }
-      if (!dissipador && info.capacidade == 22) {
-        return res.status(400).json({ error: 'Blister reservado para dissipador' });
+      if (info.capacidade === 0) {
+        const novaCap = dissipador ? 22 : 25;
+        await db.execute(
+          'UPDATE estoque.embalagens SET capacidade = ? WHERE id = ?',
+          [novaCap, id]
+        );
+        info.capacidade = novaCap;
+      } else {
+        if (dissipador && info.capacidade != 22) {
+          return res.status(400).json({ error: 'Blister não suporta dissipador' });
+        }
+        if (!dissipador && info.capacidade == 22) {
+          return res.status(400).json({ error: 'Blister reservado para dissipador' });
+        }
       }
     }
 
-    const capacidade = info.tipo === 'caixa' ? 100 : (info.capacidade || (dissipador ? 22 : 25));
+    const capacidade = info.tipo === 'caixa' ? 100 : info.capacidade;
     const disponivel = capacidade - ocup.ocupado;
     const inserir = Math.min(qtd, disponivel);
 

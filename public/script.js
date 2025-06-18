@@ -562,11 +562,19 @@ function renderizarSeparadosPaginado() {
     pagina.forEach(item => {
       const card = document.createElement("div");
       card.className = "card-preparacao";
+      const dissipador = skuPossuiDissipador(item.sku);
+      if (item.hardware === "Processador") {
+        card.classList.add("processador");
+      } else if (dissipador) {
+        card.classList.add("memoria-com-dissipador");
+      } else {
+        card.classList.add("memoria-sem-dissipador");
+      }
       const icone = item.hardware === "Processador" ? "cpu.png" : "ram.png";
       card.innerHTML = `
         <div class="card-header">
-          <img src="icon/${icone}" class="icone-hardware" alt="Icone ${item.hardware}">
-          <strong>${item.sku}</strong>
+          <img src="icon/${icone}" class="icone-hardware" id="iconeSeparado" alt="Icone ${item.hardware}">
+          <strong id="skuTitulo" >${item.sku}</strong>
           <span class="qtd">${item.qtd} un</span>
         </div>
         <div class="card-body">
@@ -766,12 +774,7 @@ async function confirmarNovaEmbalagem() {
   }
 
   try {
-    let capacidadeSelecionada = 25;
-    if (tipoSelecionado === 'blister') {
-      const escolha = prompt('Tipo de blister:\n1 - Blister 25 (padrão)\n2 - Blister 22 (dissipador)');
-      if (escolha === null) return;
-      capacidadeSelecionada = (escolha.trim() === '2' || escolha.trim() === '22') ? 22 : 25;
-    }
+    const capacidadeInicial = tipoSelecionado === 'caixa' ? 100 : 0;
 
     for (let i = 0; i < quantidade; i++) {
       await fetch(`${API_URL}/embalagens`, {
@@ -781,7 +784,7 @@ async function confirmarNovaEmbalagem() {
           pedido_id: pedidoIdAtual,
           tipo: tipoSelecionado,
           status: "aberto",
-          capacidade: tipoSelecionado === 'caixa' ? 100 : capacidadeSelecionada
+          capacidade: capacidadeInicial
         })
       });
     }
@@ -809,10 +812,8 @@ function abrirModalAddSku(id, tipo, disponivel, capacidade) {
   select.innerHTML = '';
   dadosSeparados.forEach(item => {
     if (item.qtd <= disponivel) {
-      const dissipadorItem = skuPossuiDissipador(item.sku);
       if (
-        (tipo === 'blister' && item.hardware === 'Memória RAM' &&
-          ((capacidade === 22 && dissipadorItem) || (capacidade !== 22 && !dissipadorItem))) ||
+        (tipo === 'blister' && item.hardware === 'Memória RAM') ||
         (tipo === 'caixa' && item.hardware === 'Processador')
       ) {
         const opt = document.createElement('option');
