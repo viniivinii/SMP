@@ -1,4 +1,4 @@
-## 💻 Sistema de Separação de Memórias RAM (SMP)
+## 💻 Sistema de Memorias e Processadores (SMP)
 
 Projeto interno da empresa **GAG Reciclagem de Eletrônicos**, desenvolvido para otimizar o processo de separação, embalagem e expedição de memórias RAM e processadores.
 
