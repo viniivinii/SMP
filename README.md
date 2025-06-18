@@ -1,64 +1,64 @@
-💻 Sistema de Separação de Memórias RAM (SMP)
+#💻 Sistema de Separação de Memórias RAM (SMP)
+
 Projeto interno desenvolvido para otimizar o processo de separação, embalagem e expedição de memórias RAM e processadores na empresa GAG Reciclagem de Eletrônicos.
 
 A aplicação permite que operadores cadastrem pedidos, organizem os SKUs conforme a capacidade de blisters ou caixas, e acompanhem todo o processo com rastreabilidade completa — do início da separação até a geração de relatórios em PDF.
 
-📌 Funcionalidades Principais
-📦 Gestão de Pedidos
+📌 Funcionalidades Principais:
+#📦 Gestão de Pedidos
 
-Início de pedidos com numeração única e controle individual
+◦ Início de pedidos com numeração única e controle individual
 
-Validação automática para evitar duplicatas e campos vazios
+◦ Validação automática para evitar duplicatas e campos vazios
 
-🧠 Cadastro de SKUs
+#🧠 Cadastro de SKUs
 
-Identificação automática do tipo de hardware (Memória RAM ou Processador)
+◦ Identificação automática do tipo de hardware (Memória RAM ou Processador)
 
-Cálculo dinâmico da quantidade de embalagens necessárias
+◦ Cálculo dinâmico da quantidade de embalagens necessárias
 
-Suporte a memórias com dissipador (ajuste de capacidade de blisters)
+◦ Suporte a memórias com dissipador (ajuste de capacidade de blisters)
 
-🖨️ Geração de Etiquetas
+#🖨️ Geração de Etiquetas
 
-Criação de etiquetas com código de barras para cada embalagem
+◦ Criação de etiquetas com código de barras para cada embalagem
 
-Impressão rápida e organizada por blister ou caixa
+◦ Impressão rápida e organizada por blister ou caixa
 
-🧾 Histórico e Relatórios
+#🧾 Histórico e Relatórios
 
-Visualização do tempo de separação por pedido
+◦ Visualização do tempo de separação por pedido
 
-Exportação completa em PDF com resumo de quantidades, SKUs e datas
+◦ Exportação completa em PDF com resumo de quantidades, SKUs e datas
 
-Cards visuais para total de itens, embalagens, memórias e processadores
+◦ Cards visuais para total de itens, embalagens, memórias e processadores
 
-✅ Validações Inteligentes
+#✅ Validações Inteligentes
 
-Agrupamento automático de SKUs iguais
+◦ Agrupamento automático de SKUs iguais
 
-Impede finalização de pedidos incompletos
+◦ Impede finalização de pedidos incompletos
 
-Restrições de formato no campo SKU (prefixo PC + números)
+◦ Restrições de formato no campo SKU (prefixo PC + números)
 
-🖼️ Interface
-Interface intuitiva com animações suaves
+#🖼️ Interface
+◦ Interface intuitiva com animações suaves
 
-Layout escuro com foco visual em ações importantes
+◦ Layout escuro com foco visual em ações importantes
 
-Cards informativos em tempo real
+◦ Cards informativos em tempo real
 
-Logo da empresa no topo como identificação institucional
+◦ Logo da empresa no topo como identificação institucional
 
-🛠️ Tecnologias Utilizadas
-Frontend: HTML5, CSS3, JavaScript puro (Vanilla JS)
+#🛠️ Tecnologias Utilizadas
+◦ Frontend: HTML5, CSS3, JavaScript puro (Vanilla JS)
 
 Bibliotecas:
 
-JsBarcode – geração de código de barras
-
 jsPDF – exportação de relatórios em PDF
 
-Armazenamento local: localStorage (funcionamento offline sem necessidade de servidor)
+Armazenamento via MySQL
 
 Desenvolvido com foco em eficiência operacional, rastreabilidade e padronização interna.
+
 DEV: Vinicius – GAG Reciclagem
