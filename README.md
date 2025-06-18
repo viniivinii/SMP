@@ -1,33 +1,64 @@
-# 💻 Sistema de Separação de Memórias RAM
+💻 Sistema de Separação de Memórias RAM (SMP)
+Projeto interno desenvolvido para otimizar o processo de separação, embalagem e expedição de memórias RAM e processadores na empresa GAG Reciclagem de Eletrônicos.
 
-Projeto interno da empresa **[Nome da sua empresa]** para controle e organização da separação de memórias RAM por SKU, com geração de etiquetas, controle por pedido e histórico.
+A aplicação permite que operadores cadastrem pedidos, organizem os SKUs conforme a capacidade de blisters ou caixas, e acompanhem todo o processo com rastreabilidade completa — do início da separação até a geração de relatórios em PDF.
 
-## 📌 Funcionalidades
+📌 Funcionalidades Principais
+📦 Gestão de Pedidos
 
-- Início de pedidos com numeração única
-- Cadastro de SKUs com cálculo automático de blisters
-- Suporte a dissipador com ajuste de cálculo
-- Geração e impressão de etiquetas com código de barras
-- Histórico de pedidos com tempo de separação
-- Exportação de relatórios em PDF
-- Validações inteligentes:
-  - SKUs duplicados são somados
-  - Não permite finalizar pedidos vazios
-  - Valida se o número do pedido já foi usado
-  - Campo SKU só aceita números (prefixo `PC` automático)
+Início de pedidos com numeração única e controle individual
 
-## 🖼️ Interface
+Validação automática para evitar duplicatas e campos vazios
 
-- Interface intuitiva com animações suaves
-- Layout escuro com realce visual para seções importantes
-- Logo da empresa exibida no canto superior esquerdo
+🧠 Cadastro de SKUs
 
-## 🛠️ Tecnologias Utilizadas
+Identificação automática do tipo de hardware (Memória RAM ou Processador)
 
-- HTML5 + CSS3 (com estilos personalizados)
-- JavaScript puro (Vanilla JS)
-- [JsBarcode](https://github.com/lindell/JsBarcode) para geração de código de barras
-- [jsPDF](https://github.com/parallax/jsPDF) para exportação em PDF
-- Armazenamento local via `localStorage` (persistência offline)
+Cálculo dinâmico da quantidade de embalagens necessárias
 
-Desenvolvido por Vinicius – GAG.
+Suporte a memórias com dissipador (ajuste de capacidade de blisters)
+
+🖨️ Geração de Etiquetas
+
+Criação de etiquetas com código de barras para cada embalagem
+
+Impressão rápida e organizada por blister ou caixa
+
+🧾 Histórico e Relatórios
+
+Visualização do tempo de separação por pedido
+
+Exportação completa em PDF com resumo de quantidades, SKUs e datas
+
+Cards visuais para total de itens, embalagens, memórias e processadores
+
+✅ Validações Inteligentes
+
+Agrupamento automático de SKUs iguais
+
+Impede finalização de pedidos incompletos
+
+Restrições de formato no campo SKU (prefixo PC + números)
+
+🖼️ Interface
+Interface intuitiva com animações suaves
+
+Layout escuro com foco visual em ações importantes
+
+Cards informativos em tempo real
+
+Logo da empresa no topo como identificação institucional
+
+🛠️ Tecnologias Utilizadas
+Frontend: HTML5, CSS3, JavaScript puro (Vanilla JS)
+
+Bibliotecas:
+
+JsBarcode – geração de código de barras
+
+jsPDF – exportação de relatórios em PDF
+
+Armazenamento local: localStorage (funcionamento offline sem necessidade de servidor)
+
+Desenvolvido com foco em eficiência operacional, rastreabilidade e padronização interna.
+DEV: Vinicius – GAG Reciclagem

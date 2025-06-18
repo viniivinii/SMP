@@ -50,15 +50,14 @@ function skuPossuiDissipador(codigo) {
   );
   if (!info) return false;
   return (
-    info.temDissipador === true ||
+    Boolean(info.temDissipador) ||
     (info.modelo && info.modelo.toLowerCase().includes("dissipador"))
   );
 }
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btnConfirmarExcluir');
   if (btn) btn.addEventListener('click', confirmarExcluirSku);
-});
-window.addEventListener("DOMContentLoaded", () => {
+  carregarSKUsDoBanco();
   carregarSKUs();
 });
 window.onload = () => {
@@ -487,7 +486,7 @@ if (!filtradas || filtradas.length === 0) {
       div.className = `card-embalagem ${emb.status === "fechado" ? "fechado" : "aberto"}`;
 
       const ocup = emb.ocupado || 0;
-      const capacidade = emb.tipo === 'caixa' ? 100 : 25;
+      const capacidade = emb.tipo === 'caixa' ? 100 : (emb.capacidade || 25);
       const perc = Math.round((ocup / capacidade) * 100);
       const itens = skusPorEmbalagem[emb.id] || [];
       const listaOculta = itens.map(i => `<li>${i.sku} - ${i.qtd} un</li>`).join("") || "<li>Vazio</li>";
@@ -510,7 +509,7 @@ if (!filtradas || filtradas.length === 0) {
           </button>
           ${emb.status === "aberto" ? `
             <div class="btnAcaoBts">
-              <button id="btnAtribuirSku" onclick="abrirModalAddSku(${emb.id}, '${emb.tipo}', ${capacidade - ocup})">➕</button>
+              <button id="btnAtribuirSku" onclick="abrirModalAddSku(${emb.id}, '${emb.tipo}', ${capacidade - ocup}, ${capacidade})">➕</button>
               <button id="btnExcluirEmb" onclick="excluirEmbalagem(${emb.id})">🗑️</button>
             </div>
             ` : ""}
@@ -563,8 +562,10 @@ function renderizarSeparadosPaginado() {
     pagina.forEach(item => {
       const card = document.createElement("div");
       card.className = "card-preparacao";
+      const icone = item.hardware === "Processador" ? "cpu.png" : "ram.png";
       card.innerHTML = `
         <div class="card-header">
+          <img src="icon/${icone}" class="icone-hardware" alt="Icone ${item.hardware}">
           <strong>${item.sku}</strong>
           <span class="qtd">${item.qtd} un</span>
         </div>
@@ -765,6 +766,13 @@ async function confirmarNovaEmbalagem() {
   }
 
   try {
+    let capacidadeSelecionada = 25;
+    if (tipoSelecionado === 'blister') {
+      const escolha = prompt('Tipo de blister:\n1 - Blister 25 (padrão)\n2 - Blister 22 (dissipador)');
+      if (escolha === null) return;
+      capacidadeSelecionada = (escolha.trim() === '2' || escolha.trim() === '22') ? 22 : 25;
+    }
+
     for (let i = 0; i < quantidade; i++) {
       await fetch(`${API_URL}/embalagens`, {
         method: "POST",
@@ -772,7 +780,8 @@ async function confirmarNovaEmbalagem() {
         body: JSON.stringify({
           pedido_id: pedidoIdAtual,
           tipo: tipoSelecionado,
-          status: "aberto"
+          status: "aberto",
+          capacidade: tipoSelecionado === 'caixa' ? 100 : capacidadeSelecionada
         })
       });
     }
@@ -791,16 +800,21 @@ let embalagemSelecionada = null;
 let espacoDisponivel = 0;
 let tipoEmbalagemSelecionada = null;
 
-function abrirModalAddSku(id, tipo, disponivel) {
+function abrirModalAddSku(id, tipo, disponivel, capacidade) {
   embalagemSelecionada = id;
   tipoEmbalagemSelecionada = tipo;
   espacoDisponivel = disponivel;
+  capacidadeEmbalagemSelecionada = capacidade;
   const select = document.getElementById('selectAddSku');
   select.innerHTML = '';
   dadosSeparados.forEach(item => {
     if (item.qtd <= disponivel) {
-      if ((tipo === 'blister' && item.hardware === 'Memória RAM') ||
-          (tipo === 'caixa' && item.hardware === 'Processador')) {
+      const dissipadorItem = skuPossuiDissipador(item.sku);
+      if (
+        (tipo === 'blister' && item.hardware === 'Memória RAM' &&
+          ((capacidade === 22 && dissipadorItem) || (capacidade !== 22 && !dissipadorItem))) ||
+        (tipo === 'caixa' && item.hardware === 'Processador')
+      ) {
         const opt = document.createElement('option');
         opt.value = item.id;
         opt.textContent = `${item.sku} - ${item.qtd} un`;
@@ -898,15 +912,15 @@ async function adicionarABlister(itemId, blisterId, qtd) {
     mostrarAviso(`❌ Falha: ${error.message}`, "#e74c3c");
   }
 }
-function iniciarPreparacao(id, numeroPedido) {
+async function iniciarPreparacao(id, numeroPedido) {
   pedidoIdAtual = id;
   pedidoAtual = numeroPedido;
   document.getElementById("tituloPedidoPreparacao").textContent = numeroPedido;
   document.getElementById("idPedidoPreparacao").textContent = id;
   mostrarTela("telaPreparacao");
-  carregarSkusSeparados(); // <-- Corrigido aqui
-  carregarEmbalagens(pedidoIdAtual);
-  renderizarPreparadosPaginado();
+  await carregarSkusSeparados();
+  await carregarEmbalagens(pedidoIdAtual);
+  renderizarSkusPreparadosExpandido();
 }
 function adicionarAoBlister(itemId, hardware, qtd, pedidoId) {
   if (hardware === "Processador") {

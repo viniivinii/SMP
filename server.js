@@ -123,24 +123,6 @@ app.post("/itens", async (req, res) => {
     res.status(500).json({ error: "Erro ao salvar item separado" });
   }
 });
-// app.post("/embalagens", async (req, res) => {
-//   const { pedido_id, tipo, status } = req.body;
-
-//   if (!pedido_id || !tipo || !status) {
-//     return res.status(400).json({ error: "Dados obrigatórios ausentes" });
-//   }
-
-//   try {
-//     await db.execute(
-//       "INSERT INTO estoque.embalagens (pedido_id, tipo, status) VALUES (?, ?, ?)",
-//       [pedido_id, tipo, status]
-//     );
-//     res.json({ success: true });
-//   } catch (err) {
-//     console.error("Erro ao criar embalagem:", err);
-//     res.status(500).json({ error: "Erro ao criar embalagem" });
-//   }
-// });
 app.post("/enviar", async (req, res) => {
   const { pedidoId, qtd_memoria, qtd_processador } = req.body;
 
@@ -165,19 +147,21 @@ app.post("/enviar", async (req, res) => {
   }
 });
 app.post('/embalagens', async (req, res) => {
-  const { pedido_id, tipo } = req.body; // 'tipo' = 'B' ou 'C'
+  const { pedido_id, tipo, capacidade } = req.body;
 
   try {
+    const cap = capacidade || (tipo === 'caixa' ? 100 : 25);
     const [result] = await db.execute(
-      `INSERT INTO embalagens (pedido_id, tipo, status) 
-       VALUES (?, ?, 'aberto')`,
-      [pedido_id, tipo]
+      `INSERT INTO embalagens (pedido_id, tipo, status, capacidade)
+       VALUES (?, ?, 'aberto', ?)`,
+      [pedido_id, tipo, cap]
     );
 
-    res.json({ 
+    res.json({
       id: result.insertId,
       tipo,
-      status: 'aberto'
+      status: 'aberto',
+      capacidade: cap
     });
   } catch (err) {
     console.error("Erro ao criar embalagem:", err);
@@ -192,21 +176,28 @@ app.post("/embalagens/distribuir", async (req, res) => {
   }
 
   const tipoEmb = hardware === "Processador" ? "caixa" : "blister";
-  const capacidadeMax = tipoEmb === "caixa" ? 100 : (dissipador ? 22 : 25);
+  const capacidadeNecessaria = tipoEmb === 'blister' ? (dissipador ? 22 : 25) : 100;
 
   try {
-    const [embalagens] = await db.execute(`
-      SELECT e.id,
+    let query = `
+      SELECT e.id, e.tipo, e.capacidade,
         COALESCE(SUM(ei.qtd), 0) AS ocupado
       FROM estoque.embalagens e
       LEFT JOIN estoque.embalagens_itens ei ON e.id = ei.embalagem_id
-      WHERE e.pedido_id = ? AND e.tipo = ? AND e.status = 'aberto'
-      GROUP BY e.id
-      ORDER BY e.id
-    `, [pedido_id, tipoEmb]);
+       WHERE e.pedido_id = ? AND e.tipo = ? AND e.status = 'aberto'`;
+    const params = [pedido_id, tipoEmb];
+    if (tipoEmb === 'blister') {
+      query += ' AND e.capacidade = ?';
+      params.push(capacidadeNecessaria);
+    }
+    query += ' GROUP BY e.id ORDER BY e.id';
+
+    const [embalagens] = await db.execute(query, params);
 
     if (!embalagens.length) {
-      const msg = tipoEmb === "caixa" ? "Nenhuma caixa aberta disponível" : "Nenhum blister aberto disponível";
+      const msg = tipoEmb === 'caixa'
+        ? 'Nenhuma caixa aberta disponível'
+        : 'Nenhum blister aberto disponível do tipo solicitado';
       return res.status(400).json({ error: msg });
     }
 
@@ -214,6 +205,7 @@ app.post("/embalagens/distribuir", async (req, res) => {
     let distribuido = 0;
 
     for (const emb of embalagens) {
+      const capacidadeMax = emb.tipo === 'caixa' ? 100 : (emb.capacidade || capacidadeNecessaria);
       const capacidadeDisponivel = capacidadeMax - emb.ocupado;
 
       if (capacidadeDisponivel <= 0) continue;
@@ -235,12 +227,6 @@ app.post("/embalagens/distribuir", async (req, res) => {
           `INSERT INTO estoque.embalagens_itens (embalagem_id, sku, qtd)
            VALUES (?, ?, ?)`,
           [emb.id, sku, inserir]
-        );
-      }
-      if (tipoEmb === 'blister' && dissipador) {
-        await db.execute(
-          `UPDATE estoque.embalagens SET capacidade = 22 WHERE id = ?`,
-          [emb.id]
         );
       }
 
@@ -305,7 +291,7 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
 
   try {
     const [[info]] = await db.execute(
-      'SELECT tipo FROM estoque.embalagens WHERE id = ?',
+      'SELECT tipo, capacidade FROM estoque.embalagens WHERE id = ?',
       [id]
     );
     if (!info) {
@@ -315,7 +301,16 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
       'SELECT COALESCE(SUM(qtd),0) as ocupado FROM estoque.embalagens_itens WHERE embalagem_id = ?',
       [id]
     );
-    const capacidade = info.tipo === 'caixa' ? 100 : (dissipador ? 22 : 25);
+     if (info.tipo === 'blister') {
+      if (dissipador && info.capacidade != 22) {
+        return res.status(400).json({ error: 'Blister não suporta dissipador' });
+      }
+      if (!dissipador && info.capacidade == 22) {
+        return res.status(400).json({ error: 'Blister reservado para dissipador' });
+      }
+    }
+
+    const capacidade = info.tipo === 'caixa' ? 100 : (info.capacidade || (dissipador ? 22 : 25));
     const disponivel = capacidade - ocup.ocupado;
     const inserir = Math.min(qtd, disponivel);
 
@@ -327,9 +322,6 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
       await db.execute('UPDATE estoque.embalagens_itens SET qtd = ? WHERE id = ?', [exist[0].qtd + inserir, exist[0].id]);
     } else {
       await db.execute('INSERT INTO estoque.embalagens_itens (embalagem_id, sku, qtd) VALUES (?, ?, ?)', [id, sku, inserir]);
-    }
-    if (info.tipo === 'blister' && dissipador) {
-      await db.execute('UPDATE estoque.embalagens SET capacidade = 22 WHERE id = ?', [id]);
     }
 
     const [[item]] = await db.execute('SELECT * FROM estoque.itens_separados WHERE id = ?', [item_id]);
