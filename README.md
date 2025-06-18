@@ -1,64 +1,69 @@
-#💻 Sistema de Separação de Memórias RAM (SMP)
+## 💻 Sistema de Separação de Memórias RAM (SMP)
 
-Projeto interno desenvolvido para otimizar o processo de separação, embalagem e expedição de memórias RAM e processadores na empresa GAG Reciclagem de Eletrônicos.
+Projeto interno da empresa **GAG Reciclagem de Eletrônicos**, desenvolvido para otimizar o processo de separação, embalagem e expedição de memórias RAM e processadores.
 
-A aplicação permite que operadores cadastrem pedidos, organizem os SKUs conforme a capacidade de blisters ou caixas, e acompanhem todo o processo com rastreabilidade completa — do início da separação até a geração de relatórios em PDF.
+A aplicação permite que operadores cadastrem pedidos, organizem SKUs conforme a capacidade de blisters ou caixas, e acompanhem todo o fluxo com rastreabilidade completa — desde o início da separação até a geração de relatórios em PDF.
 
-📌 Funcionalidades Principais:
-#📦 Gestão de Pedidos
+---
 
-◦ Início de pedidos com numeração única e controle individual
+## 📦 Gestão de Pedidos
 
-◦ Validação automática para evitar duplicatas e campos vazios
+- Numeração única para cada pedido com controle individual
+- Validação automática de campos obrigatórios
+- Prevenção de duplicidade de pedidos
 
-#🧠 Cadastro de SKUs
+---
 
-◦ Identificação automática do tipo de hardware (Memória RAM ou Processador)
+## 🧠 Cadastro de SKUs
 
-◦ Cálculo dinâmico da quantidade de embalagens necessárias
+- Detecção automática do tipo de hardware (Memória RAM ou Processador)
+- Cálculo inteligente de embalagens com base na capacidade (25 unidades por blister ou 22 com dissipador)
+- Suporte a memórias com dissipador
 
-◦ Suporte a memórias com dissipador (ajuste de capacidade de blisters)
+---
 
-#🖨️ Geração de Etiquetas
+## 🖨️ Geração de Etiquetas
 
-◦ Criação de etiquetas com código de barras para cada embalagem
+- Impressão de etiquetas com código de barras
+- Organização por blister ou caixa para facilitar a expedição
 
-◦ Impressão rápida e organizada por blister ou caixa
+---
 
-#🧾 Histórico e Relatórios
+## 🧾 Histórico e Relatórios
 
-◦ Visualização do tempo de separação por pedido
+- Visualização completa do histórico de pedidos
+- Tempo total de separação por pedido
+- Exportação em PDF com resumo de SKUs, quantidades, datas e embalagens utilizadas
+- Cards visuais com totais por categoria (memórias, processadores, embalagens)
 
-◦ Exportação completa em PDF com resumo de quantidades, SKUs e datas
+---
 
-◦ Cards visuais para total de itens, embalagens, memórias e processadores
+## ✅ Validações Inteligentes
 
-#✅ Validações Inteligentes
+- Agrupamento automático de SKUs iguais no mesmo pedido
+- Impedimento de finalização de pedidos incompletos
+- Restrições de formato para campo SKU (formato padrão: `PC0000`)
 
-◦ Agrupamento automático de SKUs iguais
+---
 
-◦ Impede finalização de pedidos incompletos
+## 🖼️ Interface
 
-◦ Restrições de formato no campo SKU (prefixo PC + números)
+- Interface amigável e responsiva com foco em usabilidade
+- Layout escuro com destaques visuais para ações importantes
+- Animações suaves e cards informativos em tempo real
+- Logotipo institucional no topo da aplicação
 
-#🖼️ Interface
-◦ Interface intuitiva com animações suaves
+---
 
-◦ Layout escuro com foco visual em ações importantes
+## 🛠️ Tecnologias Utilizadas
 
-◦ Cards informativos em tempo real
+- **Frontend**: HTML5, CSS3, JavaScript (Vanilla JS)
+- **Backend**: Node.js com Express
+- **Banco de Dados**: MySQL
+- **PDF**: jsPDF para exportação de relatórios
 
-◦ Logo da empresa no topo como identificação institucional
+---
 
-#🛠️ Tecnologias Utilizadas
-◦ Frontend: HTML5, CSS3, JavaScript puro (Vanilla JS)
+Sistema desenvolvido com foco em **eficiência operacional**, **rastreabilidade** e **padronização dos processos logísticos internos**.
 
-Bibliotecas:
-
-jsPDF – exportação de relatórios em PDF
-
-Armazenamento via MySQL
-
-Desenvolvido com foco em eficiência operacional, rastreabilidade e padronização interna.
-
-DEV: Vinicius – GAG Reciclagem
+> **Dev**: Vinicius Eduardo – GAG Reciclagem de Eletrônicos
