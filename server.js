@@ -86,7 +86,7 @@ app.post("/iniciar", async (req, res) => {
   }
 });
 app.post("/itens", async (req, res) => {
-  const { pedido_id, sku, qtd, hardware, modelo } = req.body;
+  const { pedido_id, sku, qtd, hardware, modelo, dissipador } = req.body;
 
   if (!pedido_id || !sku || !qtd) {
     return res.status(400).json({ error: "Dados obrigatórios ausentes" });
@@ -104,16 +104,16 @@ app.post("/itens", async (req, res) => {
       const novoTotal = existente[0].qtd + qtd;
       await db.execute(
         `UPDATE estoque.itens_separados
-         SET qtd = ?, hardware = ?, modelo = ?
+         SET qtd = ?, hardware = ?, modelo = ?, dissipador = ?
          WHERE id = ?`,
-        [novoTotal, hardware, modelo, existente[0].id]
+        [novoTotal, hardware, modelo, dissipador, existente[0].id]
       );
     } else {
       // Se não existe, insere novo
       await db.execute(
-        `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo)
-         VALUES (?, ?, ?, ?, ?)`,
-        [pedido_id, sku, qtd, hardware, modelo]
+         `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, dissipador)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [pedido_id, sku, qtd, hardware, modelo, dissipador]
       );
     }
 
@@ -264,9 +264,9 @@ app.post("/embalagens/distribuir", async (req, res) => {
             [item.qtd - distribuido, item_id]
           );
           await db.execute(
-            `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, status)
-             VALUES (?, ?, ?, ?, ?, 'preparado')`,
-            [item.pedido_id, item.sku, distribuido, item.hardware, item.modelo]
+            `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, dissipador, status)
+             VALUES (?, ?, ?, ?, ?, ?, 'preparado')`,
+            [item.pedido_id, item.sku, distribuido, item.hardware, item.modelo, item.dissipador]
           );
         } else {
           await db.execute(
@@ -344,7 +344,7 @@ app.post('/embalagens/:id/adicionar-sku', async (req, res) => {
     if (item) {
       if (inserir < item.qtd) {
         await db.execute('UPDATE estoque.itens_separados SET qtd = ?, status = "separado" WHERE id = ?', [item.qtd - inserir, item_id]);
-        await db.execute('INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, status) VALUES (?, ?, ?, ?, ?, "preparado")', [item.pedido_id, item.sku, inserir, item.hardware, item.modelo]);
+        await db.execute('INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, dissipador, status) VALUES (?, ?, ?, ?, ?, ?, "preparado")', [item.pedido_id, item.sku, inserir, item.hardware, item.modelo, item.dissipador]);
       } else {
         await db.execute('UPDATE estoque.itens_separados SET status = "preparado" WHERE id = ?', [item_id]);
       }
@@ -414,10 +414,10 @@ app.put("/itens-preparados/:id", async (req, res) => {
       );
 
       await db.execute(
-        `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, status)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [item.pedido_id, item.sku, qtdPrep, item.hardware, item.modelo, status]
-      );
+          `INSERT INTO estoque.itens_separados (pedido_id, sku, qtd, hardware, modelo, dissipador, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [item.pedido_id, item.sku, qtdPrep, item.hardware, item.modelo, item.dissipador, status]
+        );
     } else {
       await db.execute(
         `UPDATE estoque.itens_separados SET status = ? WHERE id = ?`,
@@ -643,9 +643,9 @@ app.delete("/embalagens/:id", async (req, res) => {
         } else {
           await conn.execute(
             `INSERT INTO estoque.itens_separados
-             (pedido_id, sku, qtd, hardware, modelo, status)
-             VALUES (?, ?, ?, ?, ?, 'separado')`,
-            [pedidoId, sku, remover, prep.hardware, prep.modelo]
+             (pedido_id, sku, qtd, hardware, modelo, dissipador, status)
+             VALUES (?, ?, ?, ?, ?, ?, 'separado')`,
+            [pedidoId, sku, remover, prep.hardware, prep.modelo, prep.dissipador]
           );
         }
 

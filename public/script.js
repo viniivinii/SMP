@@ -1202,7 +1202,6 @@ function adicionarSKU() {
   if (!validarSKU(sku)) return;
 
   const dissipador = document.getElementById("dissipador").checked;
-  const porBlister = dissipador ? 22 : 25;
   const qtdItem = parseInt(document.getElementById("qtdItem").value);
 
   if (isNaN(qtdItem) || qtdItem <= 0) {
@@ -1219,7 +1218,8 @@ function adicionarSKU() {
     sku,
     qtd: qtdItem,
     hardware,
-    modelo
+    modelo,
+    dissipador
   };
 
   fetch(`${API_URL}/itens`, {
