@@ -85,6 +85,13 @@
   <div class="grid-preparacao">
     <div id="colunaSeparados" class="skus-separados">
       <h3 class="titulo-coluna">SKUs Separados</h3>
+      <div class="filtro-separados">
+        <input type="text" id="buscaSeparados" placeholder="🔍 Buscar SKU..." oninput="filtrarSeparados()" />
+        <div class="ordenacao-separados">
+          <button onclick="ordenarSeparados('desc')">▲</button>
+          <button onclick="ordenarSeparados('asc')">▼</button>
+        </div>
+      </div>
       <div id="listaSeparados" class="lista-cards-preparacao"></div>
         <div class="paginacao-coluna">
           <button id="btnSepAnt" onclick="pgnAnteriorSep()">◀</button>
@@ -111,7 +118,11 @@
           <option value="aberto">Abertas</option>
           <option value="fechado">Fechadas</option>
         </select>
-        <button id="btnNovoBlister" onclick="abrirModalEmbalagem()"></button>
+        <button id="btnNovoBlister" onclick="abrirModalEmbalagem()">          
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
       </div>
       <div id="listaEmbalagens"></div>
       <div class="paginacao-coluna">

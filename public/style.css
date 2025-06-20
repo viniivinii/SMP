@@ -518,14 +518,22 @@ body {
 }
 
 #btnNovoBlister {
-    width: 100%;
-    border-radius: 10px;
+    border-radius: 7px;
+    width: 50%;
+    margin-left: 50%;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #campoBtnFiltro {
     display: grid;
+    align-items: center;
     grid-template-columns: 1fr 1fr;
     gap: 5px;
+    background-color: var(--cinza3);
+    padding: 5px 0px 5px 0px;
 }
 
 #campoBtnFiltro option {
@@ -534,8 +542,9 @@ body {
 
 #filtroEmbalagens {
     background-color: var(--cinza2);
-    width: 100%;
+    width: 150%;
     border-radius: 10px;
+    height: 32px;
 }
 
 #btnFinalizarPreparacao {
@@ -1407,6 +1416,43 @@ button:hover {
     border-radius: 5px;
     border: 1px solid var(--cinza1);
     margin-left: 280px;
+}
+
+#buscaSeparados {
+    padding: 6px;
+    width: 100%;
+    border-radius: 5px;
+    border: 1px solid var(--cinza1);
+}
+
+.filtro-separados {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--cinza3);
+    padding: 5px 0px 5px 0px;
+}
+
+#buscaSeparados {
+    background-color: var(--cinza2);
+    border-radius: 10px;
+    color: var(--branco1);
+    border: var(--cinza4) solid 2px;
+    height: 16px;
+}
+
+.ordenacao-separados button {
+    padding: 4px 6px;
+    margin-right: 4px;
+    border-radius: 4px;
+    border: none;
+    background: var(--cinza2);
+    color: #fff;
+    cursor: pointer;
+}
+
+.ordenacao-separados {
+    display: flex;
 }
 
 .paginacao {

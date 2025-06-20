@@ -36,11 +36,15 @@ let dadosEmbalagens = [];
 let skusPorEmbalagem = {};
 let filtroStatusEmbalagem = 'todas';
 
+let filtroSeparados = '';
+let ordemSeparados = null;
+
 let paginaSeparados = 1;
 let paginaPreparados = 1;
 let paginaEmbalagens = 1;
 
 const itensPorPaginaPreparacao = 4;
+const itensPorPaginaPreparados = 10;
 
 let indiceExcluir = null;
 
@@ -203,7 +207,7 @@ async function carregarSkusSeparados() {
     const totalPreparados = itensPreparados.reduce((sum, item) => sum + item.qtd, 0);
 
     renderizarSeparadosPaginado();
-    renderizarPreparadosPaginado();
+    renderizarSkusPreparadosExpandido();
 
     atualizarBarraProgresso(totalSeparados, totalPreparados);
 
@@ -222,7 +226,7 @@ async function carregarSkusSeparados() {
     dadosPreparados = [];
     atualizarBarraProgresso(0, 0);
     renderizarSeparadosPaginado();
-    renderizarPreparadosPaginado();
+    renderizarSkusPreparadosExpandido();
 
   }
 }
@@ -266,7 +270,13 @@ async function renderizarSkusPreparadosExpandido() {
     const container = document.getElementById("listaPreparados");
     container.innerHTML = "";
 
-    Object.entries(agrupados).forEach(([sku, embalagens]) => {
+    const skusAgrupados = Object.entries(agrupados);
+    const total = Math.ceil((skusAgrupados.length || 0) / itensPorPaginaPreparados) || 1;
+    if (paginaPreparados > total) paginaPreparados = total;
+    const inicio = (paginaPreparados - 1) * itensPorPaginaPreparados;
+    const pagina = skusAgrupados.slice(inicio, inicio + itensPorPaginaPreparados);
+
+    pagina.forEach(([sku, embalagens]) => {
       const card = document.createElement("div");
       card.className = "card-preparado";
       const totalQtd = embalagens.reduce((s, e) => s + e.qtd, 0);
@@ -286,6 +296,9 @@ async function renderizarSkusPreparadosExpandido() {
 
       container.appendChild(card);
     });
+    document.getElementById("paginaPreparados").textContent = `${paginaPreparados} / ${total}`;
+    document.getElementById("btnPrepAnt").disabled = paginaPreparados === 1;
+    document.getElementById("btnPrepProx").disabled = paginaPreparados === total;
   } catch (err) {
     console.error("Erro ao renderizar SKUs preparados:", err);
     document.getElementById("listaPreparados").innerHTML = `<p class='aviso'>Erro ao carregar SKUs preparados</p>`;
@@ -441,6 +454,7 @@ async function excluirEmbalagem(id) {
     });
     await carregarSkusSeparados();
     await carregarEmbalagens(pedidoIdAtual);
+    renderizarSkusPreparadosExpandido();
   } catch (err) {
     console.error("Erro ao excluir embalagem:", err);
     mostrarAviso("❌ Erro ao excluir embalagem", "#e74c3c");
@@ -457,6 +471,7 @@ async function alternarStatusBlister(id, statusAtual) {
     });
 
     mostrarAviso(`🔁 Blister ${id} agora está ${novoStatus.toUpperCase()}.`, "#3498db");
+    renderizarSkusPreparadosExpandido();
     await carregarEmbalagens(pedidoIdAtual);
 
   } catch (err) {
@@ -551,11 +566,26 @@ function renderizarSeparadosPaginado() {
   const area = document.getElementById("listaSeparados");
   area.innerHTML = "";
 
-  if (dadosSeparados.length === 0) {
+   let lista = [...dadosSeparados];
+
+  if (filtroSeparados) {
+    const termo = filtroSeparados.toLowerCase();
+    lista = lista.filter(i => i.sku.toLowerCase().includes(termo));
+  }
+
+  if (ordemSeparados === 'asc') {
+    lista.sort((a, b) => a.qtd - b.qtd);
+  } else if (ordemSeparados === 'desc') {
+    lista.sort((a, b) => b.qtd - a.qtd);
+  }
+
+  if (lista.length === 0) {
     area.innerHTML = "<p class='aviso'>Nenhum SKU para preparar</p>";
   } else {
+    const total = Math.ceil(lista.length / itensPorPaginaPreparacao) || 1;
+    if (paginaSeparados > total) paginaSeparados = total;
     const inicio = (paginaSeparados - 1) * itensPorPaginaPreparacao;
-    const pagina = dadosSeparados.slice(inicio, inicio + itensPorPaginaPreparacao);
+    const pagina = lista.slice(inicio, inicio + itensPorPaginaPreparacao);
 
     pagina.forEach(item => {
       const card = document.createElement("div");
@@ -584,7 +614,7 @@ function renderizarSeparadosPaginado() {
     });
   }
 
-  const total = Math.ceil((dadosSeparados.length || 0) / itensPorPaginaPreparacao) || 1;
+  const total = Math.ceil((lista.length || 0) / itensPorPaginaPreparacao) || 1;
   document.getElementById("paginaSeparados").textContent = `${paginaSeparados} / ${total}`;
   document.getElementById("btnSepAnt").disabled = paginaSeparados === 1;
   document.getElementById("btnSepProx").disabled = paginaSeparados === total;
@@ -609,54 +639,73 @@ function renderizarPreparadosPaginado() {
     });
   }
 
-  const total = Math.ceil((dadosPreparados.length || 0) / itensPorPaginaPreparacao) || 1;
+  const total = Math.ceil((dadosPreparados.length || 0) / itensPorPaginaPreparados) || 1;
   document.getElementById("paginaPreparados").textContent = `${paginaPreparados} / ${total}`;
   document.getElementById("btnPrepAnt").disabled = paginaPreparados === 1;
   document.getElementById("btnPrepProx").disabled = paginaPreparados === total;
 }
 //botoes de paginação tela preparação
 function pgnAnteriorSep() {
+  const total = Math.ceil(dadosSeparados.length / itensPorPaginaPreparacao) || 1;
   if (paginaSeparados > 1) {
     paginaSeparados--;
-    renderizarSeparadosPaginado();
+    } else {
+    paginaSeparados = total;
   }
+  renderizarSeparadosPaginado();
 }
 function pgnProximoSep() {
-  const total = Math.ceil(dadosSeparados.length / itensPorPaginaPreparacao);
+  const total = Math.ceil(dadosSeparados.length / itensPorPaginaPreparacao) || 1;
   if (paginaSeparados < total) {
     paginaSeparados++;
-    renderizarSeparadosPaginado();
+  } else {
+    paginaSeparados = 1;
   }
+  renderizarSeparadosPaginado();
 }
 function pgnAnteriorPre() {
+  const total = Math.ceil(dadosPreparados.length / itensPorPaginaPreparados) || 1;
   if (paginaPreparados > 1) {
     paginaPreparados--;
-    renderizarPreparadosPaginado();
+  } else {
+    paginaPreparados = total;
   }
+  renderizarSkusPreparadosExpandido();
 }
 function pgnProximoPre() {
-  const total = Math.ceil(dadosPreparados.length / itensPorPaginaPreparacao);
+  const total = Math.ceil(dadosPreparados.length / itensPorPaginaPreparados) || 1;
   if (paginaPreparados < total) {
     paginaPreparados++;
-    renderizarPreparadosPaginado();
+  } else {
+    paginaPreparados = 1;
   }
+  renderizarSkusPreparadosExpandido();
 }
 function pgnAnteriorEmb() {
-  if (paginaEmbalagens > 1) {
-    paginaEmbalagens--;
-    renderizarEmbalagensPaginado();
-  }
-}
-function pgnProximoEmb() {
-    const filtradas = dadosEmbalagens.filter(e => {
+  const filtradas = dadosEmbalagens.filter(e => {
     if (filtroStatusEmbalagem === 'todas') return true;
     return e.status === filtroStatusEmbalagem;
   });
-  const total = Math.ceil(filtradas.length / itensPorPaginaPreparacao);
+  const total = Math.ceil(filtradas.length / itensPorPaginaPreparacao) || 1;
+  if (paginaEmbalagens > 1) {
+    paginaEmbalagens--;
+  } else {
+    paginaEmbalagens = total;
+  }
+  renderizarEmbalagensPaginado();
+}
+function pgnProximoEmb() {
+  const filtradas = dadosEmbalagens.filter(e => {
+    if (filtroStatusEmbalagem === 'todas') return true;
+    return e.status === filtroStatusEmbalagem;
+  });
+  const total = Math.ceil(filtradas.length / itensPorPaginaPreparacao) || 1;
   if (paginaEmbalagens < total) {
     paginaEmbalagens++;
-    renderizarEmbalagensPaginado();
+  } else {
+    paginaEmbalagens = 1;
   }
+  renderizarEmbalagensPaginado();
 }
 //------------------------------------//
 function filtrarEmbalagens() {
@@ -664,6 +713,17 @@ function filtrarEmbalagens() {
   filtroStatusEmbalagem = select.value;
   paginaEmbalagens = 1;
   renderizarEmbalagensPaginado();
+}
+function filtrarSeparados() {
+  const input = document.getElementById('buscaSeparados');
+  filtroSeparados = input.value;
+  paginaSeparados = 1;
+  renderizarSeparadosPaginado();
+}
+function ordenarSeparados(ordem) {
+  ordemSeparados = ordem;
+  paginaSeparados = 1;
+  renderizarSeparadosPaginado();
 }
 async function prepararItem(itemId, hardware, qtd, sku, dissipador) {
   try {
@@ -1597,8 +1657,10 @@ function atualizarControlesPaginacaoHistorico() {
 function paginaAnteriorHistorico() {
   if (historicoPaginaAtual > 1) {
     historicoPaginaAtual--;
-    carregarHistoricoPaginado();
+    } else {
+    historicoPaginaAtual = historicoTotalPaginas;
   }
+  carregarHistoricoPaginado();
 }
 function proximaPaginaHistorico() {
   if (historicoPaginaAtual < historicoTotalPaginas) {
