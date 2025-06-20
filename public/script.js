@@ -1588,10 +1588,10 @@ function atualizarControlesPaginacaoHistorico() {
   const paginacao = document.getElementById("paginacaoHistorico");
   paginacao.innerHTML = `
     <button onclick="paginaAnteriorHistorico()" ${historicoPaginaAtual === 1 ? "disabled" : ""
-    }>⬅️ Anterior</button>
+    }>◀</button>
     <span>${historicoPaginaAtual} / ${historicoTotalPaginas}</span>
     <button onclick="proximaPaginaHistorico()" ${historicoPaginaAtual === historicoTotalPaginas ? "disabled" : ""
-    }>Próxima ➡️</button>
+    }>▶</button>
   `;
 }
 function paginaAnteriorHistorico() {

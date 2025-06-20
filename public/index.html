@@ -106,12 +106,12 @@
     <div id="colunaBlisters" class="blisters">
       <h3 class="titulo-coluna">Embalagem</h3>
       <div id="campoBtnFiltro">
-        <button id="btnNovoBlister" onclick="abrirModalEmbalagem()">Adicionar</button>
         <select id="filtroEmbalagens" onchange="filtrarEmbalagens()">
           <option value="todas">Todas</option>
           <option value="aberto">Abertas</option>
           <option value="fechado">Fechadas</option>
         </select>
+        <button id="btnNovoBlister" onclick="abrirModalEmbalagem()"></button>
       </div>
       <div id="listaEmbalagens"></div>
       <div class="paginacao-coluna">
@@ -243,9 +243,9 @@
         <tbody id="listaTabelaSkus"></tbody>
       </table>
       <div class="paginacao">
-        <button id="btnAnterior" onclick="paginaAnterior()">◀ Anterior</button>
+        <button id="btnAnterior" onclick="paginaAnterior()">◀</button>
         <span id="paginaAtual">1 / 1</span>
-        <button id="btnProximo" onclick="proximaPagina()">Próxima ▶</button>
+        <button id="btnProximo" onclick="proximaPagina()">▶</button>
       </div>
     </div>
   </div>

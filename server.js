@@ -609,7 +609,7 @@ app.delete("/embalagens/:id", async (req, res) => {
       let restante = qtd;
       while (restante > 0) {
         const [[prep]] = await conn.execute(
-          `SELECT id, qtd, hardware, modelo FROM estoque.itens_separados
+          `SELECT id, qtd, hardware, modelo, dissipador FROM estoque.itens_separados
            WHERE pedido_id = ? AND sku = ? AND status = 'preparado' LIMIT 1`,
           [pedidoId, sku]
         );
